@@ -2,7 +2,7 @@
 
 **Data:** 2025  
 **Repositório:** `/home/fortes/Repositórios/pyloto_corp`  
-**Padrão:** `regras_e_padroes.md`  
+**Padrão:** [regras_e_padroes.md](../../regras_e_padroes.md)  
 **Modo:** Análise Diagnóstica (SEM recomendações de correção)
 
 ---
@@ -23,7 +23,7 @@
 
 ## ⚠️ ARQUIVOS COM ATENÇÃO
 
-### 1. [src/pyloto_corp/adapters/whatsapp/validators.py](src/pyloto_corp/adapters/whatsapp/validators.py) — **338 linhas**
+### 1. [src/pyloto_corp/adapters/whatsapp/validators.py](../../src/pyloto_corp/adapters/whatsapp/validators.py) — **338 linhas**
 
 **Violações identificadas:**
 
@@ -33,15 +33,15 @@
 
 - **32 linhas com comprimento > 79 caracteres**
   - Exemplos:
-    - [L149](src/pyloto_corp/adapters/whatsapp/validators.py#L149): `elif msg_type == MessageType.DOCUMENT and mime_type not in cls.SUPPORTED_DOCUMENT_TYPES:`
-    - [L59](src/pyloto_corp/adapters/whatsapp/validators.py#L59): `raise ValidationError("Recipient must be in E.164 format (..."`
+    - [L149](../../src/pyloto_corp/adapters/whatsapp/validators.py#L149): `elif msg_type == MessageType.DOCUMENT and mime_type not in cls.SUPPORTED_DOCUMENT_TYPES:`
+    - [L59](../../src/pyloto_corp/adapters/whatsapp/validators.py#L59): `raise ValidationError("Recipient must be in E.164 format (..."`
 
 **Classificação:** ⚠️ **ATENÇÃO**  
 **Razão:** Arquivo de 338L está acima da faixa ótima de 200L. Classe única com 317L viola SRP. Porém, funcionalidade é monolítica e lógica bem estruturada; sem PII ou riscos críticos.
 
 ---
 
-### 2. [src/pyloto_corp/adapters/whatsapp/outbound.py](src/pyloto_corp/adapters/whatsapp/outbound.py) — **323 linhas**
+### 2. [src/pyloto_corp/adapters/whatsapp/outbound.py](../../src/pyloto_corp/adapters/whatsapp/outbound.py) — **323 linhas**
 
 **Violações identificadas:**
 
@@ -54,29 +54,29 @@
 
 - **12 linhas com comprimento > 79 caracteres**
   - Exemplos:
-    - [L122](src/pyloto_corp/adapters/whatsapp/outbound.py#L122): `def send_batch(self, requests: list[OutboundMessageRequest]) -> list[...`
-    - [L247](src/pyloto_corp/adapters/whatsapp/outbound.py#L247): `def _build_interactive_object(self, request: OutboundMessageRequest...`
+    - [L122](../../src/pyloto_corp/adapters/whatsapp/outbound.py#L122): `def send_batch(self, requests: list[OutboundMessageRequest]) -> list[...`
+    - [L247](../../src/pyloto_corp/adapters/whatsapp/outbound.py#L247): `def _build_interactive_object(self, request: OutboundMessageRequest...`
 
 **Classificação:** ⚠️ **ATENÇÃO**  
 **Razão:** Arquivo de 323L acima da faixa ideal. Classe única com 281L. Função `_build_payload()` com 85L excede 70L. Porém, PII logging foi corrigido (não contém `.to`); sem riscos críticos.
 
 ---
 
-### 3. [src/pyloto_corp/adapters/whatsapp/normalizer.py](src/pyloto_corp/adapters/whatsapp/normalizer.py) — **283 linhas**
+### 3. [src/pyloto_corp/adapters/whatsapp/normalizer.py](../../src/pyloto_corp/adapters/whatsapp/normalizer.py) — **283 linhas**
 
 **Violações identificadas:**
 
 - **5 linhas com comprimento > 79 caracteres**
   - Exemplos:
-    - [L99](src/pyloto_corp/adapters/whatsapp/normalizer.py#L99): `def _extract_interactive_message(msg: dict[str, Any]) -> tuple[str | N...`
-    - [L235](src/pyloto_corp/adapters/whatsapp/normalizer.py#L235): `def extract_messages(payload: dict[str, Any]) -> list[NormalizedWhatsA...`
+    - [L99](../../src/pyloto_corp/adapters/whatsapp/normalizer.py#L99): `def _extract_interactive_message(msg: dict[str, Any]) -> tuple[str | N...`
+    - [L235](../../src/pyloto_corp/adapters/whatsapp/normalizer.py#L235): `def extract_messages(payload: dict[str, Any]) -> list[NormalizedWhatsA...`
 
 **Classificação:** ⚠️ **ATENÇÃO** (baixo nível)  
 **Razão:** Arquivo de 283L está na faixa 200-400L (aceitável). Todas as funções <= 70L. Apenas linhas longas em assinaturas de função. SRP bem definido: normalização de payloads webhook.
 
 ---
 
-### 4. [src/pyloto_corp/application/export.py](src/pyloto_corp/application/export.py) — **297 linhas**
+### 4. [src/pyloto_corp/application/export.py](../../src/pyloto_corp/application/export.py) — **297 linhas**
 
 **Violações identificadas:**
 
@@ -89,42 +89,42 @@
 
 - **7 linhas com comprimento > 79 caracteres**
   - Exemplos:
-    - [L50](src/pyloto_corp/application/export.py#L50): `page = self.conversation_store.get_messages(user_key=user_key, ...`
-    - [L25](src/pyloto_corp/application/export.py#L25): `def save(self, *, user_key: str, content: bytes, content_type: str = ...`
+    - [L50](../../src/pyloto_corp/application/export.py#L50): `page = self.conversation_store.get_messages(user_key=user_key, ...`
+    - [L25](../../src/pyloto_corp/application/export.py#L25): `def save(self, *, user_key: str, content: bytes, content_type: str = ...`
 
 **Classificação:** ⚠️ **ATENÇÃO**  
 **Razão:** Arquivo de 297L na faixa 200-400L. Classe de 261L, função `execute()` de 106L. Porém, refatoração anterior já dividiu responsabilidades (coleta → renderização → formatação → persistência → auditoria são claros). Sem PII em logs. Bem documentado em Português_BR.
 
 ---
 
-### 5. [src/pyloto_corp/domain/whatsapp_message_types.py](src/pyloto_corp/domain/whatsapp_message_types.py) — **230 linhas**
+### 5. [src/pyloto_corp/domain/whatsapp_message_types.py](../../src/pyloto_corp/domain/whatsapp_message_types.py) — **230 linhas**
 
 **Violações identificadas:**
 
 - **7 linhas com comprimento > 79 caracteres**
   - Exemplos:
-    - [L41](src/pyloto_corp/domain/whatsapp_message_types.py#L41): `raise ValueError("Image must have either 'id' (inbound) or 'url' (outbound)")`
-    - [L80](src/pyloto_corp/domain/whatsapp_message_types.py#L80): `raise ValueError("Document must have either 'id' (inbound) or 'url' (outbound)")`
+    - [L41](../../src/pyloto_corp/domain/whatsapp_message_types.py#L41): `raise ValueError("Image must have either 'id' (inbound) or 'url' (outbound)")`
+    - [L80](../../src/pyloto_corp/domain/whatsapp_message_types.py#L80): `raise ValueError("Document must have either 'id' (inbound) or 'url' (outbound)")`
 
 **Classificação:** ⚠️ **ATENÇÃO** (muito baixo nível)  
 **Razão:** Arquivo de 230L na faixa ideal 200-400L. Todas as funções <= 70L. Linha longa é apenas em mensagens de erro (aceitável). SRP bem definido: modelos Pydantic para tipos de mensagem Meta/WhatsApp.
 
 ---
 
-### 6. [src/pyloto_corp/api/routes.py](src/pyloto_corp/api/routes.py) — **80 linhas**
+### 6. [src/pyloto_corp/api/routes.py](../../src/pyloto_corp/api/routes.py) — **80 linhas**
 
 **Violações identificadas:**
 
 - **7 linhas com comprimento > 79 caracteres**
   - Exemplos:
-    - [L31](src/pyloto_corp/api/routes.py#L31): `def whatsapp_verify(token: str, challenge: str, settings: Settings = ...`
+    - [L31](../../src/pyloto_corp/api/routes.py#L31): `def whatsapp_verify(token: str, challenge: str, settings: Settings = ...`
 
 **Classificação:** ⚠️ **ATENÇÃO** (mínimo)  
 **Razão:** Arquivo pequeno (80L) e bem estruturado. Apenas assinaturas de função longas. SRP claro: rotas HTTP.
 
 ---
 
-### 7. [src/pyloto_corp/domain/enums.py](src/pyloto_corp/domain/enums.py) — **103 linhas**
+### 7. [src/pyloto_corp/domain/enums.py](../../src/pyloto_corp/domain/enums.py) — **103 linhas**
 
 **Violações identificadas:**
 
@@ -135,7 +135,7 @@
 
 ---
 
-### 8. [src/pyloto_corp/application/conversations.py](src/pyloto_corp/application/conversations.py) — **143 linhas**
+### 8. [src/pyloto_corp/application/conversations.py](../../src/pyloto_corp/application/conversations.py) — **143 linhas**
 
 **Violações identificadas:**
 
@@ -146,7 +146,7 @@
 
 ---
 
-### 9. [src/pyloto_corp/infra/firestore_conversations.py](src/pyloto_corp/infra/firestore_conversations.py) — **116 linhas**
+### 9. [src/pyloto_corp/infra/firestore_conversations.py](../../src/pyloto_corp/infra/firestore_conversations.py) — **116 linhas**
 
 **Violações identificadas:**
 
@@ -157,7 +157,7 @@
 
 ---
 
-### 10. [src/pyloto_corp/config/settings.py](src/pyloto_corp/config/settings.py) — **83 linhas**
+### 10. [src/pyloto_corp/config/settings.py](../../src/pyloto_corp/config/settings.py) — **83 linhas**
 
 **Violações identificadas:**
 
@@ -170,7 +170,7 @@
 
 ## ✅ ARQUIVOS EM CONFORMIDADE
 
-**52 arquivos** estão em plena conformidade com as regras de `regras_e_padroes.md`:
+**52 arquivos** estão em plena conformidade com as regras de [regras_e_padroes.md](../../regras_e_padroes.md):
 
 ### Camada Domain (100% conforme)
 - `domain/audit.py` (59L)
@@ -352,4 +352,4 @@ Este repositório está em **bom estado técnico geral**:
 ---
 
 **Fim do Relatório Diagnóstico**  
-Status: ✅ **CONFORME COM REGRAS_E_PADROES.MD**
+Status: ✅ **CONFORME COM [regras_e_padroes.md](../../regras_e_padroes.md)**

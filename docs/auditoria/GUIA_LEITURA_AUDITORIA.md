@@ -55,7 +55,7 @@ Três documentos de auditoria foram gerados neste repositório:
 ### Se você é **Desenvolvedor Responsável pelo Código**
 1. Leia `RELATORIO_AUDITORIA_COMPLETO.md` seção "Arquivos com ATENÇÃO"
 2. Entenda seus arquivos específicos
-3. Compare com as regras em `regras_e_padroes.md`
+3. Compare com as regras em [regras_e_padroes.md](../../regras_e_padroes.md)
 4. Decida se refatorar (opcional) ou aceitar (recomendado)
 
 ### Se você é **Arquiteto / Revisor Sênior**
@@ -182,9 +182,9 @@ Confirmado: Nenhum arquivo > 500L, nenhuma PII em logs, nenhuma violação arqui
 
 ## 🔗 Referências
 
-- **Regras aplicadas:** [regras_e_padroes.md](regras_e_padroes.md)
-- **Especificação do produto:** [Funcionamento.md](Funcionamento.md)
-- **Código analisado:** [src/pyloto_corp/](src/pyloto_corp/)
+- **Regras aplicadas:** [regras_e_padroes.md](../../regras_e_padroes.md)
+- **Especificação do produto:** [Funcionamento.md](../../Funcionamento.md)
+- **Código analisado:** [src/pyloto_corp/](../../src/pyloto_corp/)
 - **Testes validados:** 69/69 PASSANDO ✓
 
 ---

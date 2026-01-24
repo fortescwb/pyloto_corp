@@ -266,7 +266,7 @@ Regras de qualificação:
 
 ### Definição de coleta completa (campos críticos por fluxo)
 
-**Sistemas sob Medida — campos críticos**
+#### Sistemas sob Medida — campos críticos
 
 * problema atual claramente descrito
 * funcionalidades desejadas
@@ -274,7 +274,7 @@ Regras de qualificação:
 * cidade/estado
 * prazo esperado
 
-**SaaS – Pyloto da sua Comunicação — campos críticos**
+#### SaaS – Pyloto da sua Comunicação — campos críticos
 
 * tipo de negócio
 * canais utilizados

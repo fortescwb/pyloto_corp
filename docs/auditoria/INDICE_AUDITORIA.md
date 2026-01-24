@@ -2,7 +2,7 @@
 
 ## ⚡ Início Rápido
 
-**Status Geral:** ✅ **CONFORME COM REGRAS_E_PADROES.MD**
+**Status Geral:** ✅ **CONFORME COM [regras_e_padroes.md](../../regras_e_padroes.md)**
 
 - **84% de conformidade** (52 de 62 arquivos)
 - **0 violações críticas**
@@ -75,7 +75,7 @@
 | Perfil | Leia Primeiro | Depois | Propósito |
 |--------|---------------|--------|-----------|
 | **Product Manager** | SUMARIO.md | GUIA_LEITURA.md | Status geral |
-| **Desenvolvedor** | RELATORIO.md | regras_e_padroes.md | Detalhes técnicos |
+| **Desenvolvedor** | RELATORIO.md | [regras_e_padroes.md](../../regras_e_padroes.md) | Detalhes técnicos |
 | **Arquiteto** | RELATORIO.md | DADOS.json | Análise estrutural |
 | **QA/Automação** | DADOS.json | SUMARIO.md | Integração CI/CD |
 | **CTO/Revisor** | SUMARIO.md → RELATORIO.md | DADOS.json | Visão completa |
@@ -115,7 +115,7 @@
 ### Ação de Manutenção:
 - Revisar auditoria a cada 3 meses
 - Integrar análise em CI/CD
-- Manter regras em `regras_e_padroes.md`
+- Manter regras em [regras_e_padroes.md](../../regras_e_padroes.md)
 
 ---
 
@@ -149,7 +149,7 @@
 Para dúvidas sobre a auditoria:
 
 1. **Tecnicamente:** Revise [RELATORIO_AUDITORIA_COMPLETO.md](RELATORIO_AUDITORIA_COMPLETO.md)
-2. **Implementação:** Consulte [regras_e_padroes.md](regras_e_padroes.md)
+2. **Implementação:** Consulte [regras_e_padroes.md](../../regras_e_padroes.md)
 3. **Próximas ações:** Veja [GUIA_LEITURA_AUDITORIA.md](GUIA_LEITURA_AUDITORIA.md)
 4. **Dados brutos:** Parse [AUDITORIA_DADOS.json](AUDITORIA_DADOS.json)
 
@@ -161,7 +161,7 @@ Para dúvidas sobre a auditoria:
 |------|-------|
 | **Repositório** | pyloto_corp |
 | **Data da auditoria** | 2025 |
-| **Regras aplicadas** | regras_e_padroes.md |
+| **Regras aplicadas** | [regras_e_padroes.md](../../regras_e_padroes.md) |
 | **Arquivos analisados** | 62 Python files |
 | **Conformidade geral** | 84% (52/62) |
 | **Resultado final** | ✅ APROVADO |
