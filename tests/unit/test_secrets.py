@@ -32,9 +32,11 @@ class TestEnvSecretProvider:
         """Deve levantar RuntimeError se env var não existe."""
         provider = EnvSecretProvider()
         # Garante que a variável não existe
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(RuntimeError, match="não encontrado"):
-                provider.get_secret("NONEXISTENT_SECRET")
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            pytest.raises(RuntimeError, match="não encontrado"),
+        ):
+            provider.get_secret("NONEXISTENT_SECRET")
 
     def test_secret_exists_returns_true_when_present(self) -> None:
         """Deve retornar True se env var existe."""
@@ -86,7 +88,8 @@ class TestSecretManagerProvider:
 
     def test_get_client_raises_without_dependency(self) -> None:
         """Deve levantar erro se google-cloud-secret-manager não instalado."""
-        provider = SecretManagerProvider(project_id="test")
+        # Cria provider para verificar comportamento
+        _ = SecretManagerProvider(project_id="test")
 
         # Mock para simular ImportError
         with patch.dict("sys.modules", {"google.cloud": None}):
