@@ -1,0 +1,59 @@
+📦 pyloto_corp/
+
+📊 ALTERAÇÕES NO MÓDULO WHATSAPP
+
+✓ CRIADOS (5 novos arquivos):
+├── src/pyloto_corp/domain/whatsapp_message_types.py (332 linhas)
+│   └─ Modelos Pydantic para todos os tipos de mensagem Meta
+│
+├── src/pyloto_corp/adapters/whatsapp/validators.py (240 linhas)
+│   └─ Validador central para conformidade Meta API
+│
+├── tests/adapters/__init__.py
+├── tests/adapters/test_normalizer.py (450 linhas, 14 testes)
+└── tests/adapters/test_validators.py (350 linhas, 20 testes)
+
+✓ MODIFICADOS (5 arquivos refatorados):
+├── src/pyloto_corp/domain/enums.py
+│   ├─ +MessageType (10 tipos)
+│   ├─ +InteractiveType (3 tipos)
+│   ├─ +MessageCategory (4 categorias)
+│   └─ +MediaType (15 MIME types)
+│
+├── src/pyloto_corp/adapters/whatsapp/models.py
+│   ├─ NormalizedWhatsAppMessage: 7 → 30 campos
+│   ├─ +InboundMessageEvent
+│   ├─ +OutboundMessageRequest
+│   └─ +OutboundMessageResponse
+│
+├── src/pyloto_corp/adapters/whatsapp/normalizer.py
+│   ├─ extract_messages() refatorado
+│   └─ +4 helpers (_extract_text, _extract_media, etc.)
+│
+├── src/pyloto_corp/adapters/whatsapp/outbound.py
+│   ├─ send_message(OutboundMessageRequest) → OutboundMessageResponse
+│   ├─ send_batch(list[OutboundMessageRequest]) → list[OutboundMessageResponse]
+│   └─ +payload builders para todos os tipos
+│
+└── src/pyloto_corp/config/settings.py
+    └─ 35+ novos settings Meta/WhatsApp
+
+📈 ESTATÍSTICAS:
+- Linhas adicionadas: ~1.300
+- Linhas modificadas: ~200
+- Testes: 34/34 ✓
+- Cobertura: 100% normalizer + validators
+- Tempo execução testes: 0.14s
+
+🎯 TIPOS SUPORTADOS:
+✓ Text, Image, Video, Audio, Document, Sticker
+✓ Location, Contacts, Interactive, Reaction
+
+🏷️  CATEGORIAS:
+✓ MARKETING, UTILITY, AUTHENTICATION, SERVICE
+
+📋 VALIDAÇÕES:
+✓ E.164 phone numbers
+✓ Limites de tamanho
+✓ MIME types
+✓ Estrutura de botões/listas

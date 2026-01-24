@@ -1,0 +1,205 @@
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+
+                                                                                   Meus apps
+
+
+
+
+          Plataforma do WhatsApp Business
+
+          Documentação      Visão geral   Como enviar mensagens
+
+
+          Como enviar mensagens
+          Updated: 4 de nov de 2025
+
+          Este documento descreve como usar a API para enviar mensagens aos usuários do
+          WhatsApp.
+
+
+          Tipos de mensagens
+          Você pode usar a API para enviar os tipos de mensagem a seguir.
+
+
+          As mensagens de endereço permitem que você
+          peça facilmente um endereço de entrega aos
+          usuários do WhatsApp.
+
+
+
+
+          As mensagens de áudio mostram um ícone e um
+          link para um arquivo de áudio. Quando o usuário
+          do WhatsApp toca no ícone, o cliente do
+          WhatsApp carrega e reproduz o arquivo.
+
+
+
+
+          As mensagens de contato permitem que você
+          envie informações avançadas de contato
+          diretamente aos usuários do WhatsApp, como
+          nomes, números de telefone, endereços físicos e
+          endereços de email.
+
+
+
+
+1 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+          As mensagens de documento exibem um ícone
+                                                                                   Meus apps
+          para o usuário do WhatsApp tocar e baixar um
+          documento.
+
+
+
+
+          As mensagens de imagem exibem uma única
+          imagem e uma legenda opcional.
+
+
+
+
+          As
+          mensagens interativas com botão de URL de CTA
+          permitem que você associe qualquer URL a um
+          botão para não precisar incluir URLs inteiros que
+          são longos e obscuros no corpo da mensagem.
+
+
+
+
+2 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+          As mensagens de flow interativas permitem
+                                                                                   Meus apps
+          enviar mensagens estruturadas mais naturais ou
+          agradáveis para os clientes. Por exemplo, é
+          possível usar o WhatsApp Flows para marcar um
+          horário, navegar por produtos, coletar feedback
+          dos clientes, captar novos leads de vendas ou
+          qualquer outra ação.
+
+          As mensagens de flow interativas estão
+          documentadas no nosso conjunto de
+          documentos do WhatsApp Flows.
+
+
+
+
+          As mensagens de lista interativas permitem
+          apresentar uma lista de opções para escolha dos
+          usuários do WhatsApp.
+
+
+
+
+          As
+          mensagens interativas com pedido de localização
+          exibem um corpo de texto e o botão de enviar
+          localização. Quando o usuário do WhatsApp toca
+          no botão, uma tela para compartilhar a
+          localização é exibida, permitindo que ele faça o
+          compartilhamento.
+
+
+
+
+3 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+
+                                                                                   Meus apps
+
+
+          As
+          mensagens interativas com botões de resposta
+          permitem que você envie até três respostas
+          predefinidas para o usuário escolher.
+
+
+
+
+          As mensagens de localização permitem que você
+          envie as coordenadas de latitude e longitude de
+          uma localização para um usuário do WhatsApp.
+
+
+
+
+          As mensagens de figurinhas exibem imagens
+          animadas ou estáticas de figurinhas em uma
+          mensagem do WhatsApp.
+
+
+
+
+4 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+          As mensagens de texto contêm apenas um corpo
+                                                                                   Meus apps
+          de texto e uma prévia de link opcional.
+
+
+
+
+          As mensagens de modelo permitem que você
+          envie modelos de marketing, utilidade e
+          autenticação para usuários do WhatsApp. Ao
+          contrário de todos os demais tipos de
+          mensagens, as mensagens de modelo não
+          exigem que haja uma janela de atendimento ao
+          cliente 24 horas aberta entre você e o
+          destinatário da mensagem antes de serem
+          enviadas.
+
+
+
+
+          Qualidade da mensagem
+          A qualidade da mensagem é baseada em como ela foi recebida pelos usuários do
+          WhatsApp nos últimos 7 dias e ponderada pela recenticidade. Ela é determinada por uma
+          As mensagens de vídeo exibem uma prévia em
+          combinação de sinais de feedback, que incluem bloqueios, denúncias, silenciamentos e
+          miniatura de uma imagem de vídeo com uma
+          arquivamentos, além dos motivos fornecidos pelos usuários quando bloqueiam sua
+          legenda opcional. Quando o usuário do
+          empresa.
+          WhatsApp toca na prévia, o vídeo é carregado e
+          exibido.
+          Diretrizes para o envio de mensagens de alta qualidade:
+
+           • As mensagens devem seguir a Política de Mensagens do WhatsApp Business         .
+
+           • Envie mensagens apenas a usuários do WhatsApp que aceitaram receber mensagens
+             da sua empresa.
+          As mensagens de reação são reações com emoji
+           • Crie mensagens altamente personalizadas e úteis para os usuários.
+          que você pode aplicar a uma mensagem anterior
+           • Evite enviar
+          recebida de um mensagens   introdutórias ou de boas-vindas que sejam vagas demais.
+                          usuário do WhatsApp.
+           • Evite enviar muitas mensagens aos clientes por dia.
+
+           • Otimize suas mensagens em termos de conteúdo e tamanho.
+
+          O status do número de telefone comercial, a classificação de qualidade   e os
+
+
+5 of 14                                                                                    24/01/2026, 15:34
+

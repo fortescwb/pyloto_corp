@@ -1,0 +1,49 @@
+"""Configuração de logging estruturado (JSON)."""
+
+from __future__ import annotations
+
+import logging
+
+from pythonjsonlogger.json import JsonFormatter
+
+from pyloto_corp.observability.middleware import get_correlation_id
+
+
+class CorrelationIdFilter(logging.Filter):
+    """Insere correlation_id e service no record de log.
+
+    Importante: nunca adicionar payloads brutos ou PII nos logs.
+    """
+
+    def __init__(self, service_name: str) -> None:
+        super().__init__()
+        self._service_name = service_name
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: A003
+        record.correlation_id = get_correlation_id()
+        record.service = self._service_name
+        return True
+
+
+def configure_logging(level: str, service_name: str) -> None:
+    """Configura logging JSON com campos padrao do serviço."""
+
+    formatter = JsonFormatter(
+        "%(asctime)s %(levelname)s %(name)s %(message)s %(correlation_id)s %(service)s",
+        rename_fields={"levelname": "level", "name": "logger"},
+    )
+
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    handler.setFormatter(formatter)
+    handler.addFilter(CorrelationIdFilter(service_name))
+
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.handlers = [handler]
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Retorna logger simples; o filtro injeta service/correlation_id."""
+
+    return logging.getLogger(name)

@@ -1,0 +1,270 @@
+Documentação para desenvolvedores da Meta | APIs,...                    https://developers.facebook.com/docs/
+
+
+
+
+                           Meus apps     Ações necessárias   Mais      DocumentosPesquisar...
+
+
+
+
+             Documentação para desenvolvedores
+             da Meta
+             Aprenda a enviar e receber dados do grá�ico social da Meta, além de
+             implementar APIs, plataformas, produtos e SDKs de acordo com as
+             necessidades do seu app.
+
+
+
+
+             Desenvolvimento de apps                          Graph API
+             da Meta
+                                                              A principal forma de os apps
+             Inscreva-se como                                 lerem e gravarem no grá�ico
+             desenvolvedor, de�ina as                         social da Meta.
+             con�igurações no Painel de
+             Apps, crie, teste e lance o app.                 Documentos
+
+             Documentos
+
+             Iniciativas de plataforma
+             responsável
+
+             Veri�ique se o app usa nossos
+             produtos e APIs de uma forma
+             que aprovamos.
+
+             Documentos
+
+
+
+
+             Integrações do app
+
+             App Links
+
+
+             Graph API
+
+
+             Meta App Events
+
+
+             Meta Pixel
+
+
+
+1 of 5                                                                                     24/01/2026, 15:39
+Documentação para desenvolvedores da Meta | APIs,...                https://developers.facebook.com/docs/
+
+
+
+
+             Webhooks      Meus apps     Ações necessárias   Mais   Documentos
+
+
+
+
+             Autenticação
+
+             Facebook Login
+
+
+             Limited Facebook Login
+
+
+             Login Connect with Messenger
+
+
+
+
+             Guias do desenvolvedor
+
+             Meta App Development
+
+
+             Políticas do Desenvolvedor
+
+
+             Termos da Plataforma da Meta
+
+
+             Privacidade e consentimento
+
+
+
+
+             SDKs
+
+             Facebook SDK for Android
+
+
+             Facebook SDK for iOS
+
+
+             Facebook SDK for JavaScript
+
+
+             SDK do Facebook para PHP
+
+
+
+
+2 of 5                                                                                 24/01/2026, 15:39
+Documentação para desenvolvedores da Meta | APIs,...                https://developers.facebook.com/docs/
+
+
+
+
+             Unity SDK     Meus apps     Ações necessárias   Mais   Documentos
+
+
+
+             Meta Business SDK
+
+
+
+
+             Jogos
+
+             Facebook Games
+
+
+             Game Payments
+
+
+
+
+             Integrações sociais
+
+             Facebook Pages API
+
+
+             Instagram Platform
+
+
+             Threads API
+
+
+             Sharing
+
+
+             Social Plugins
+
+
+
+
+             Vídeos
+
+             Live Video API
+
+
+             Stories
+
+
+             Videos
+
+
+
+
+3 of 5                                                                                 24/01/2026, 15:39
+Documentação para desenvolvedores da Meta | APIs,...                https://developers.facebook.com/docs/
+
+
+
+
+                           Meus apps     Ações necessárias   Mais   Documentos
+             Business Messaging
+
+             Plataforma do WhatsApp Business
+
+
+             Messenger Platform
+
+
+             WhatsApp Flows
+
+
+
+
+             Marketing e comércio
+
+             Facebook Creator Discovery API
+
+
+             Facebook App Ads
+
+
+             Automotive Ads
+
+
+             Catalog
+
+
+             Commerce Platform
+
+
+             Conversions API
+
+
+             Conversions API Gateway
+
+
+             Signals Gateway
+
+
+             Cross-Channel Conversion Optimization
+
+
+             Meta Audience Network
+
+
+             Meta Business SDK
+
+
+             Meta Pay Integration
+
+
+
+4 of 5                                                                                 24/01/2026, 15:39
+Documentação para desenvolvedores da Meta | APIs,...                https://developers.facebook.com/docs/
+
+
+
+
+             Marketing APIMeus apps      Ações necessárias   Mais   Documentos
+
+
+
+
+             Trabalho e educação
+
+             Meta Admin Center
+
+
+             Workplace
+
+
+
+
+             Inteligência arti�icial
+
+             Wit.ai
+
+
+
+
+             Rights Manager
+
+
+
+
+             Portabilidade de dados
+
+             Data Portability
+
+
+
+
+5 of 5                                                                                 24/01/2026, 15:39
+

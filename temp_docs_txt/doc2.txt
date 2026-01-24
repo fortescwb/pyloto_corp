@@ -1,0 +1,264 @@
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+          limites de envio de mensagens são exibidos no painel do Gerenciador do WhatsApp      >
+          Ferramentas da conta > Números de telefone.                             Meus apps
+
+
+
+
+          É normal que números com alto tráfego passem por alterações na qualidade em
+          intervalos curtos (até mesmo em minutos).
+
+
+          Janelas de atendimento ao cliente
+          Se você receber uma mensagem ou uma ligação de um usuário do WhatsApp, uma janela
+          de atendimento ao cliente de 24 horas será aberta (ou atualizada, caso já tenha sido
+          iniciada).
+
+
+          Quando uma janela de atendimento ao cliente estiver aberta, você pode enviar qualquer
+          tipo de mensagem ao usuário. Caso contrário, será possível enviar somente mensagens
+          de modelo ao usuário, pois esse é o único tipo de mensagem que pode ser enviado fora da
+          janela de atendimento ao cliente.
+
+
+          Só é possível fazer envios a usuários que aceitaram receber suas mensagens.
+
+
+          Problema conhecido: em casos raros, talvez você receba uma mensagem de um usuário,
+          mas não consiga respondê-la dentro do prazo da janela de atendimento ao cliente.
+          Lamentamos o transtorno.
+
+
+          Pedidos
+
+
+6 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+          Todos os pedidos de envio de mensagem usam o ponto de extremidade
+          POST /<WHATSAPP_BUSINESS_PHONE_NUMBER_ID/messages:                       Meus apps
+
+
+            POST /<WHATSAPP_BUSINESS_PHONE_NUMBER_ID>/messages
+
+
+
+          O corpo do post varia conforme o tipo de mensagem, mas a carga usa a seguinte sintaxe
+          comum:
+
+
+            {
+                "messaging_product": "whatsapp",
+                "recipient_type": "<RECIPIENT_TYPE>",
+                "to": "<WHATSAPP_USER_PHONE_NUMBER>",
+                "type": "<MESSAGE_TYPE>",
+                "<MESSAGE_TYPE>": {<MESSAGE_CONTENTS>}
+            }
+
+
+
+          O valor da propriedade type na carga do corpo indica o tipo de mensagem a ser enviado.
+          É necessário incluir uma propriedade correspondente a esse tipo que descreva o
+          conteúdo da mensagem.
+
+
+          A propriedade recipient_type pode ser indivudal para mensagens individuais ou
+          group para mensagens em grupo.
+
+
+          Saiba mais sobre a API de Grupos
+
+
+          Abaixo, há um pedido para enviar uma mensagem de texto a um usuário do WhatsApp.
+          Observe que type é definido como text, e o objeto text descreve o conteúdo da
+          mensagem:
+
+
+            curl 'https://graph.facebook.com/v24.0/106540352242922/messages' \
+            -H 'Content-Type: application/json' \
+            -H 'Authorization: Bearer EAAJB...' \
+            -d '
+            {
+               "messaging_product": "whatsapp",
+               "recipient_type": "individual",
+               "to": "+16505551234",
+               "type": "text",
+               "text": {
+                 "preview_url": true,
+                 "body": "As requested, here'\''s the link to our latest product:
+            https://www.meta.com/quest/quest-3/"
+               }
+            }'
+
+
+
+          Se fosse entregue ao usuário, a mensagem teria esta aparência no cliente do WhatsApp:
+
+
+
+7 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+
+                                                                                   Meus apps
+
+
+
+
+          Respostas
+          A API retornará a resposta JSON a seguir ao aceitar o pedido de envio de mensagem se
+          não houver erros. Essa resposta indica somente que a API aceitou o pedido, ou seja, não
+          indica a entrega da mensagem. O status de entrega de mensagem é comunicado pelos
+          webhooks de mensagens.
+
+
+          Sintaxe da resposta
+
+            {
+              "messaging_product": "whatsapp",
+              "contacts": [
+                {
+                   "input": "<WHATSAPP_USER_PHONE_NUMBER>",
+                   "wa_id": "<WHATSAPP_USER_ID>"
+                 }
+              ],
+              "messages": [
+                {
+                   "id": "<WHATSAPP_MESSAGE_ID>",
+                   "group_id": "<GROUP_ID>", <!-- Only included if messaging a group
+            -->
+                   "message_status": "<PACING_STATUS>" <!-- Only included if sending
+            a template -->
+                }
+              ]
+            }
+
+
+
+
+          Conteúdo da resposta
+
+
+            Espaço reservado                         Descrição                              Exemplo de valor
+
+
+
+
+            <GROUP_ID>                               O identificador de string de um        Y2FwaV9ncm91c
+                                                     grupo criado com a API de
+            String
+                                                     Grupos.
+
+                                                     Esse campo mostra quando as
+
+
+8 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+
+            Espaço reservado                        Descrição                      Meus appsExemplo de valor
+
+                                                    mensagens são enviadas,
+                                                    recebidas ou lidas em um grupo.
+
+                                                    Saiba mais sobre a API de Grupos
+
+
+
+
+            <PACING_STATUS>                         Indica o status de                      wamid.HBgLMTY
+                                                    regularidade do modelo. A
+            String
+                                                    propriedade message_status é
+                                                    incluída nas respostas apenas
+                                                    quando você envia mensagens
+                                                    com um modelo que está sendo
+                                                    modificado por regularidade.
+
+
+
+
+            <WHATSAPP_USER_PHONE_NUMBER>            O número de telefone do                 +16505551234
+                                                    WhatsApp do usuário. Pode não
+            String
+                                                    corresponder ao valor wa_id.
+
+
+
+
+            <WHATSAPP_USER_ID>                      ID do usuário do WhatsApp.              16505551234
+                                                    Pode não corresponder ao valor
+            String
+                                                    input.
+
+
+
+
+            <WHATSAPP_MESSAGE_ID>                   Identificação da mensagem do            wamid.HBgLMTY
+                                                    WhatsApp. Essa identificação
+            String
+                                                    aparece em webhooks de
+                                                    mensagens associados, como
+                                                    webhooks de mensagens
+                                                    enviadas, lidas e entregues.
+
+
+
+
+          Mensagens comerciais
+          As mensagens comerciais são mensagens interativas usadas em conjunto com um
+          catálogo de produtos. Consulte o artigo Compartilhar produtos com clientes para saber
+
+
+9 of 14                                                                                    24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+           como usar esses tipos de mensagem.
+                                                                                    Meus apps
+
+           Confirmações de leitura
+           Para confirmar a leitura, você pode marcar uma mensagem como lida, exibindo dois
+           tiques azuis (chamados de "confirmações de leitura") abaixo da mensagem do usuário do
+           WhatsApp:
+
+
+
+
+           Indicadores de digitação
+           Caso você leve alguns segundos ou mais para responder a um usuário, será possível
+           informar que a resposta está sendo elaborada usando o indicador de digitação e as
+           confirmações de leitura no cliente do WhatsApp:
+
+
+
+
+           Respostas contextuais
+           Você pode enviar uma mensagem para um usuário do WhatsApp como uma
+           resposta contextual, que cita uma mensagem anterior em um balão de contexto:
+
+
+
+
+           Dessa forma, fica mais fácil para o usuário saber a qual mensagem específica você está
+           respondendo.
+
+
+           Webhooks
+           As mensagens enviadas a usuários do WhatsApp disparam webhooks de mensagens.
+           Assine esse tópico para receber notificações relacionadas ao status de mensagens.
+
+
+
+10 of 14                                                                                    24/01/2026, 15:34
+

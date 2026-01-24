@@ -1,0 +1,29 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "WABA_ID_PLACEHOLDER",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "5511999999999",
+              "phone_number_id": "PHONE_NUMBER_ID"
+            },
+            "messages": [
+              {
+                "id": "wamid.HBgLMDAwMDAwMDAwMDAwFQIAERgSMjE2RTg5M0I0RjY3QTA3AA==",
+                "from": "5511999999999",
+                "timestamp": "1700000000",
+                "type": "text",
+                "text": {"body": "Oi"}
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

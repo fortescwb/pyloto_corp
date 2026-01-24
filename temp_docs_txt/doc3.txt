@@ -1,0 +1,183 @@
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+
+           Formatos de número de telefone do usuário do WhatsApp Meus apps
+           Os sinais de adição (+), hifens (-), parênteses ((,)) e espaços são compatíveis com os
+           pedidos de envio de mensagem.
+
+
+           Recomendamos que você inclua o sinal de adição e o código de ligação do país ao enviar
+           mensagens para os clientes. Se o sinal de adição for omitido, o código de ligação do país
+           do seu número de telefone comercial será adicionado antes do número de telefone do
+           cliente. Isso pode resultar em mensagens não entregues ou entregues incorretamente.
+
+
+           Por exemplo, sua empresa está sediada na Índia (código de ligação do país 91) e você
+           envia uma mensagem para o seguinte número de telefone do cliente em vários formatos:
+
+
+
+             Número na solicitação de envio de
+                                                    Número de mensagens entregues         Resultado
+             mensagem
+
+
+
+
+             +16315551234                           +16315551234                          Número correto
+
+
+
+
+             +1 (631) 555-1234                      +16315551234                          Número correto
+
+
+
+
+             (631) 555-1234                         +916315551234                         Número possivelmen
+
+
+
+
+             1 (631) 555-1234                       +9116315551234                        Número possivelmen
+
+
+
+
+           Observação: no Brasil e no México, o prefixo extra adicionado ao número de telefone
+           poderá ser modificado pela API de Nuvem. Esse é um comportamento padrão do sistema
+           e não é considerado um bug.
+
+
+           Cache de mídia
+           Caso esteja usando um (link) para um ativo de mídia no servidor (em vez do ID (id) de
+           um ativo carregado nos nossos servidores), a API de Nuvem do WhatsApp armazena em
+           cache interno o ativo por um período estático de dez minutos. O ativo em cache será
+
+
+11 of 14                                                                                      24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+           usado em pedidos de envio de mensagem subsequentes se o link nas cargas posteriores
+           de envio de mensagem for o mesmo que o da carga de envio da mensagemMeus   apps
+                                                                                 inicial.
+
+
+           Se não quiser que o ativo em cache seja reutilizado em uma mensagem subsequente no
+           período de dez minutos, adicione uma string de consulta aleatória ao link do ativo na nova
+           carga de pedido de envio de mensagem. Ele será tratado como um novo ativo, obtido do
+           seu servidor, e armazenado em cache por 10 minutos.
+
+
+           Por exemplo:
+
+            • Link do ativo no 1º pedido de envio de mensagem: https://link.to.media/
+              sample.jpg — ativo recuperado, em cache por dez minutos
+
+            • Link do ativo no 2º pedido de envio de mensagem: https://link.to.media/
+              sample.jpg – uso do ativo em cache
+
+            • Link do ativo no 3º pedido de envio de mensagem: https://link.to.media/
+              sample.jpg?abc123 — ativo recuperado, em cache por dez minutos
+
+
+           Sequência de entrega de várias mensagens
+           Se você enviar várias mensagens, talvez elas não sejam entregues na mesma ordem dos
+           pedidos da API. Caso haja uma ordem a ser seguida, verifique se cada mensagem foi
+           entregue no status delivered do webhook de mensagens antes de enviar a próxima.
+
+
+           Tempo de vida (TTL) da mensagem
+           Se não conseguirmos entregar uma mensagem a um usuário do WhatsApp, faremos
+           novas tentativas de entrega por um período conhecido como tempo de vida (TTL, nas
+           iniciais em inglês) ou período de validade da mensagem.
+
+
+           TTL padrão
+            • Todas as mensagens, exceto modelos de autenticação: 30 dias.
+
+            • Modelos de autenticação: 10 minutos
+
+
+           Como personalizar o TTL para modelos
+
+           Você pode personalizar o TTL padrão para modelos de autenticação e utilidade, assim
+           como para modelos de marketing enviados usando a API de MM Lite. Para saber mais,
+           consulte nosso documento Tempo de vida.
+
+
+           Quando o TTL é excedido: mensagens descartadas
+
+
+12 of 14                                                                                     24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+           As mensagens que não puderem ser entregues dentro do TTL padrão ou personalizado
+           serão descartadas.                                                  Meus apps
+
+
+           Se você não receber um webhook de mensagens de status com status definido como
+           delivered antes da expiração do TTL, presuma que a mensagem foi descartada.
+
+
+           Se você enviar uma mensagem e houver uma falha (mudança de status para failed),
+           poderá ocorrer um atraso no recebimento do webhook. Por isso, é recomendável
+           incorporar um buffer antes de presumir o descarte.
+
+
+           Solução de problemas
+           Se você está tendo problemas com a entrega de mensagens, consulte
+           Mensagem não entregue.
+
+
+
+
+                                       Você achou esta página útil?
+
+
+
+
+              Desenvolva com a Meta
+
+
+              IA
+
+              Meta Horizon
+
+              Tecnologias sociais
+
+
+
+              Notícias
+
+
+
+13 of 14                                                                                   24/01/2026, 15:34
+Como enviar mensagens | Documentação do desenvolvedor https://developers.facebook.com/documentation/busin...
+
+
+
+           Suporte
+                                                                                   Meus apps
+
+           Termos e políticas
+
+
+           Quem somos
+
+
+
+
+           Português (Brasil)
+
+
+
+
+14 of 14                                                                                   24/01/2026, 15:34
+
