@@ -15,6 +15,9 @@ from pyloto_corp.infra.http import (
     HttpClient,
     HttpClientConfig,
     HttpError,
+    _calculate_backoff,
+    _is_retryable_status,
+    _sanitize_url,
     create_http_client,
 )
 
@@ -57,60 +60,55 @@ class TestHttpError:
 
 
 class TestHttpClient:
-    """Testes para HttpClient."""
+    """Testes para HttpClient e helpers de módulo."""
 
     @pytest.fixture
     def client(self) -> HttpClient:
         """Fixture para cliente com config padrão."""
         return HttpClient(HttpClientConfig(max_retries=2))
 
-    def test_sanitize_url_removes_token(self, client: HttpClient) -> None:
+    def test_sanitize_url_removes_token(self) -> None:
         """Deve remover access_token da URL."""
         url = "https://api.example.com?access_token=secret123&other=value"
-        sanitized = client._sanitize_url(url)
+        sanitized = _sanitize_url(url)
         assert "secret123" not in sanitized
         assert "access_token=***" in sanitized
         assert "other=value" in sanitized
 
-    def test_sanitize_url_preserves_clean_url(self, client: HttpClient) -> None:
+    def test_sanitize_url_preserves_clean_url(self) -> None:
         """Deve preservar URL sem tokens."""
         url = "https://api.example.com/path"
-        assert client._sanitize_url(url) == url
+        assert _sanitize_url(url) == url
 
-    def test_is_retryable_status_429(self, client: HttpClient) -> None:
+    def test_is_retryable_status_429(self) -> None:
         """429 (rate limit) deve ser retryable."""
-        assert client._is_retryable_status(429) is True
+        assert _is_retryable_status(429) is True
 
-    def test_is_retryable_status_5xx(self, client: HttpClient) -> None:
+    def test_is_retryable_status_5xx(self) -> None:
         """5xx deve ser retryable."""
-        assert client._is_retryable_status(500) is True
-        assert client._is_retryable_status(502) is True
-        assert client._is_retryable_status(503) is True
+        assert _is_retryable_status(500) is True
+        assert _is_retryable_status(502) is True
+        assert _is_retryable_status(503) is True
 
-    def test_is_retryable_status_4xx(self, client: HttpClient) -> None:
+    def test_is_retryable_status_4xx(self) -> None:
         """4xx (exceto 429) não deve ser retryable."""
-        assert client._is_retryable_status(400) is False
-        assert client._is_retryable_status(401) is False
-        assert client._is_retryable_status(404) is False
+        assert _is_retryable_status(400) is False
+        assert _is_retryable_status(401) is False
+        assert _is_retryable_status(404) is False
 
-    def test_calculate_backoff(self, client: HttpClient) -> None:
+    def test_calculate_backoff(self) -> None:
         """Backoff deve ser exponencial."""
         # attempt 0: 2^0 * 2 = 2
-        assert client._calculate_backoff(0) == 2.0
+        assert _calculate_backoff(0, 2.0, 30.0) == 2.0
         # attempt 1: 2^1 * 2 = 4
-        assert client._calculate_backoff(1) == 4.0
+        assert _calculate_backoff(1, 2.0, 30.0) == 4.0
         # attempt 2: 2^2 * 2 = 8
-        assert client._calculate_backoff(2) == 8.0
+        assert _calculate_backoff(2, 2.0, 30.0) == 8.0
 
     def test_calculate_backoff_respects_max(self) -> None:
         """Backoff deve respeitar máximo configurado."""
-        config = HttpClientConfig(
-            backoff_base_seconds=2.0,
-            backoff_max_seconds=10.0,
-        )
-        client = HttpClient(config)
         # attempt 5: 2^5 * 2 = 64, mas max é 10
-        assert client._calculate_backoff(5) == 10.0
+        assert _calculate_backoff(5, 2.0, 10.0) == 10.0
 
 
 class TestHttpClientAsync:
@@ -227,9 +225,11 @@ class TestHttpClientAsync:
         mock_httpx_client.request.return_value = error_response
         client._client = mock_httpx_client
 
-        with patch("asyncio.sleep", new_callable=AsyncMock):
-            with pytest.raises(HttpError) as exc_info:
-                await client.get("https://api.example.com")
+        with (
+            patch("asyncio.sleep", new_callable=AsyncMock),
+            pytest.raises(HttpError) as exc_info,
+        ):
+            await client.get("https://api.example.com")
 
         assert exc_info.value.status_code == 503
         # 1 tentativa inicial + 2 retries = 3 chamadas

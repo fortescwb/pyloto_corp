@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -28,6 +29,16 @@ if TYPE_CHECKING:
     from pyloto_corp.config.settings import Settings
 
 logger: logging.Logger = get_logger(__name__)
+
+# Regex pré-compilado para sanitização de URL
+_ACCESS_TOKEN_PATTERN = re.compile(r"access_token=[^&]+")
+
+
+def _sanitize_url(url: str) -> str:
+    """Remove tokens e credenciais da URL para logging seguro."""
+    if "access_token=" in url:
+        return _ACCESS_TOKEN_PATTERN.sub("access_token=***", url)
+    return url
 
 
 @dataclass
@@ -41,17 +52,12 @@ class HttpClientConfig:
     max_retries: int = 3
     backoff_base_seconds: float = 2.0
     backoff_max_seconds: float = 30.0
-    # Headers padrão injetados em todas as requisições
     default_headers: dict[str, str] = field(default_factory=dict)
-    # Se True, verifica SSL (sempre True em produção)
     verify_ssl: bool = True
 
 
 class HttpError(Exception):
-    """Erro de requisição HTTP.
-
-    Encapsula detalhes do erro sem expor informações sensíveis.
-    """
+    """Erro de requisição HTTP sem expor informações sensíveis."""
 
     def __init__(
         self,
@@ -64,25 +70,138 @@ class HttpError(Exception):
         self.is_retryable = is_retryable
 
 
+def _is_retryable_status(status_code: int) -> bool:
+    """Determina se status HTTP permite retry (429 ou 5xx)."""
+    return status_code == 429 or 500 <= status_code < 600
+
+
+def _calculate_backoff(
+    attempt: int,
+    base_seconds: float,
+    max_seconds: float,
+) -> float:
+    """Calcula tempo de espera com backoff exponencial."""
+    backoff = (2**attempt) * base_seconds
+    return min(backoff, max_seconds)
+
+
+def _log_request_start(method: str, url: str, attempt: int, max_r: int) -> None:
+    """Loga início de requisição sem dados sensíveis."""
+    logger.debug(
+        "Executando requisição HTTP",
+        extra={
+            "method": method,
+            "url": _sanitize_url(url),
+            "attempt": attempt + 1,
+            "max_retries": max_r,
+        },
+    )
+
+
+def _log_request_success(method: str, url: str, status_code: int) -> None:
+    """Loga sucesso de requisição."""
+    logger.debug(
+        "Requisição HTTP bem-sucedida",
+        extra={
+            "method": method,
+            "url": _sanitize_url(url),
+            "status_code": status_code,
+        },
+    )
+
+
+def _log_non_retryable_error(method: str, url: str, status_code: int) -> None:
+    """Loga erro não retentável."""
+    logger.warning(
+        "Requisição HTTP falhou (não retryable)",
+        extra={
+            "method": method,
+            "url": _sanitize_url(url),
+            "status_code": status_code,
+        },
+    )
+
+
+def _log_transient_error(
+    msg: str,
+    method: str,
+    url: str,
+    attempt: int,
+    error: str,
+) -> None:
+    """Loga erro transitório (timeout, conexão)."""
+    logger.warning(
+        msg,
+        extra={
+            "method": method,
+            "url": _sanitize_url(url),
+            "attempt": attempt + 1,
+            "error": error,
+        },
+    )
+
+
+def _log_unexpected_error(method: str, url: str, error_type: str) -> None:
+    """Loga erro inesperado."""
+    logger.error(
+        "Erro inesperado em requisição HTTP",
+        extra={
+            "method": method,
+            "url": _sanitize_url(url),
+            "error_type": error_type,
+        },
+    )
+
+
+def _log_backoff(backoff: float, next_attempt: int) -> None:
+    """Loga aguardo de backoff."""
+    logger.info(
+        "Aguardando backoff antes de retry",
+        extra={"backoff_seconds": backoff, "next_attempt": next_attempt},
+    )
+
+
+def _log_retries_exhausted(method: str, url: str, total: int) -> None:
+    """Loga esgotamento de retries."""
+    logger.error(
+        "Esgotou tentativas de retry",
+        extra={
+            "method": method,
+            "url": _sanitize_url(url),
+            "total_attempts": total,
+        },
+    )
+
+
+def _handle_transient_exception(
+    exc: Exception,
+    method: str,
+    url: str,
+    attempt: int,
+) -> HttpError:
+    """Trata exceções transitórias (timeout, conexão) e retorna HttpError."""
+    if isinstance(exc, httpx.TimeoutException):
+        _log_transient_error("Timeout em requisição HTTP", method, url, attempt, str(exc))
+        return HttpError("Timeout", is_retryable=True)
+
+    if isinstance(exc, httpx.ConnectError):
+        _log_transient_error("Erro de conexão HTTP", method, url, attempt, str(exc))
+        return HttpError("Erro de conexão", is_retryable=True)
+
+    _log_unexpected_error(method, url, type(exc).__name__)
+    raise HttpError(f"Erro inesperado: {type(exc).__name__}") from exc
+
+
 class HttpClient:
     """Cliente HTTP assíncrono com retry e logging.
 
     Uso típico:
         async with HttpClient(config) as client:
             response = await client.post(url, json=payload)
-
-    Ou sem context manager:
-        client = HttpClient(config)
-        response = await client.get(url)
-        await client.close()
     """
 
     def __init__(self, config: HttpClientConfig | None = None) -> None:
-        """Inicializa cliente com configuração.
-
-        Args:
-            config: Configuração do cliente. Usa padrões se None.
-        """
+        """Inicializa cliente com configuração."""
         self._config = config or HttpClientConfig()
         self._client: httpx.AsyncClient | None = None
 
@@ -110,21 +229,6 @@ class HttpClient:
         """Fecha cliente ao sair do context."""
         await self.close()
 
-    def _is_retryable_status(self, status_code: int) -> bool:
-        """Determina se status HTTP permite retry.
-
-        Retryable: 429 (rate limit), 5xx (server errors)
-        Não retryable: 4xx (client errors, exceto 429)
-        """
-        # Rate limit ou server errors são retryable
-        return status_code == 429 or 500 <= status_code < 600
-
-    def _calculate_backoff(self, attempt: int) -> float:
-        """Calcula tempo de espera com backoff exponencial."""
-        # 2^attempt * base, limitado ao máximo
-        backoff = (2**attempt) * self._config.backoff_base_seconds
-        return min(backoff, self._config.backoff_max_seconds)
-
     async def _request_with_retry(
         self,
         method: str,
@@ -145,127 +249,68 @@ class HttpClient:
             HttpError: Se todas as tentativas falharem
         """
         client = await self._get_client()
-        last_error: Exception | None = None
+        last_error: HttpError | None = None
+        cfg = self._config
 
-        for attempt in range(self._config.max_retries + 1):
+        for attempt in range(cfg.max_retries + 1):
+            _log_request_start(method, url, attempt, cfg.max_retries)
+
             try:
-                logger.debug(
-                    "Executando requisição HTTP",
-                    extra={
-                        "method": method,
-                        "url": self._sanitize_url(url),
-                        "attempt": attempt + 1,
-                        "max_retries": self._config.max_retries,
-                    },
-                )
-
                 response = await client.request(method, url, **kwargs)
-
-                # Sucesso
-                if response.is_success:
-                    logger.debug(
-                        "Requisição HTTP bem-sucedida",
-                        extra={
-                            "method": method,
-                            "url": self._sanitize_url(url),
-                            "status_code": response.status_code,
-                        },
-                    )
-                    return response
-
-                # Erro não retryable
-                if not self._is_retryable_status(response.status_code):
-                    logger.warning(
-                        "Requisição HTTP falhou (não retryable)",
-                        extra={
-                            "method": method,
-                            "url": self._sanitize_url(url),
-                            "status_code": response.status_code,
-                        },
-                    )
-                    raise HttpError(
-                        f"HTTP {response.status_code}",
-                        status_code=response.status_code,
-                        is_retryable=False,
-                    )
-
-                # Erro retryable - continua loop
+                result = self._process_response(response, method, url)
+                if result is not None:
+                    return result
                 last_error = HttpError(
                     f"HTTP {response.status_code}",
                     status_code=response.status_code,
                     is_retryable=True,
                 )
 
-            except httpx.TimeoutException as e:
-                last_error = HttpError("Timeout", is_retryable=True)
-                logger.warning(
-                    "Timeout em requisição HTTP",
-                    extra={
-                        "method": method,
-                        "url": self._sanitize_url(url),
-                        "attempt": attempt + 1,
-                        "error": str(e),
-                    },
-                )
-
-            except httpx.ConnectError as e:
-                last_error = HttpError("Erro de conexão", is_retryable=True)
-                logger.warning(
-                    "Erro de conexão HTTP",
-                    extra={
-                        "method": method,
-                        "url": self._sanitize_url(url),
-                        "attempt": attempt + 1,
-                        "error": str(e),
-                    },
-                )
-
             except HttpError:
                 raise
+            except Exception as exc:
+                last_error = _handle_transient_exception(exc, method, url, attempt)
 
-            except Exception as e:
-                last_error = HttpError(f"Erro inesperado: {type(e).__name__}")
-                logger.error(
-                    "Erro inesperado em requisição HTTP",
-                    extra={
-                        "method": method,
-                        "url": self._sanitize_url(url),
-                        "error_type": type(e).__name__,
-                    },
-                )
-                raise
+            await self._wait_backoff_if_needed(attempt)
 
-            # Aguarda backoff antes do próximo retry
-            if attempt < self._config.max_retries:
-                backoff = self._calculate_backoff(attempt)
-                logger.info(
-                    "Aguardando backoff antes de retry",
-                    extra={
-                        "backoff_seconds": backoff,
-                        "next_attempt": attempt + 2,
-                    },
-                )
-                await asyncio.sleep(backoff)
-
-        # Esgotou retries
-        logger.error(
-            "Esgotou tentativas de retry",
-            extra={
-                "method": method,
-                "url": self._sanitize_url(url),
-                "total_attempts": self._config.max_retries + 1,
-            },
-        )
+        _log_retries_exhausted(method, url, cfg.max_retries + 1)
         raise last_error or HttpError("Falha após todos os retries")
 
-    def _sanitize_url(self, url: str) -> str:
-        """Remove tokens e credenciais da URL para logging."""
-        # Remove access_token se presente na URL
-        if "access_token=" in url:
-            import re
+    def _process_response(
+        self,
+        response: httpx.Response,
+        method: str,
+        url: str,
+    ) -> httpx.Response | None:
+        """Processa resposta: retorna se sucesso, levanta se não retentável.
 
-            url = re.sub(r"access_token=[^&]+", "access_token=***", url)
-        return url
+        Returns:
+            Response se sucesso, None se retentável
+        """
+        if response.is_success:
+            _log_request_success(method, url, response.status_code)
+            return response
+
+        if not _is_retryable_status(response.status_code):
+            _log_non_retryable_error(method, url, response.status_code)
+            raise HttpError(
+                f"HTTP {response.status_code}",
+                status_code=response.status_code,
+                is_retryable=False,
+            )
+        return None
+
+    async def _wait_backoff_if_needed(self, attempt: int) -> None:
+        """Aguarda backoff se ainda há retries disponíveis."""
+        cfg = self._config
+        if attempt < cfg.max_retries:
+            backoff = _calculate_backoff(
+                attempt,
+                cfg.backoff_base_seconds,
+                cfg.backoff_max_seconds,
+            )
+            _log_backoff(backoff, attempt + 2)
+            await asyncio.sleep(backoff)
 
     # Métodos de conveniência
 
