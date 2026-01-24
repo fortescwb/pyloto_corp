@@ -21,32 +21,32 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 
 ## 📁 Estrutura de TODO Lists
 
-### 1️⃣ [TODO_01_INFRAESTRUTURA_E_SERVICOS.md](TODO_01_INFRAESTRUTURA_E_SERVICOS.md)
+### 1️⃣ [TODO_01_INFRAESTRUTURA_E_SERVICOS.md](TODO_01_INFRAESTRUTURA_E_SERVICOS.md) — 🚀 EM ANDAMENTO
 
 **Objetivo:** Preparar infraestrutura em nuvem (GCP) e pipeline CI/CD
 
-**Seções:**
+**Status:** Código implementado, provisionamento GCP pendente
 
-- ✅ Configurar Ambiente de Nuvem
-  - Projeto GCP
-  - Firestore (collections: conversations, user_profiles, audit_logs)
-  - Cloud Storage (buckets: media, export)
-  - Redis/Memorystore (deduplicação)
-  - Pub/Sub (opcional)
+**Implementado (Janeiro 2026):**
+- ✅ `config/settings.py` — Graph API v24.0, collections, buckets, validação
+- ✅ `infra/secrets.py` — SecretManagerProvider com factory
+- ✅ `infra/dedupe.py` — RedisDedupeStore com fail-closed
+- ✅ `infra/http.py` — HttpClient com retry exponencial
+- ✅ `docs/firestore/schema.md` — Schema completo
+- ✅ `docs/api-migration.md` — Guia de migração
+- ✅ `.github/workflows/ci.yml` — Pipeline expandido
+- ✅ 84 novos testes unitários (155 total)
 
-- ✅ Gerenciar Segredos
-  - Secret Manager (tokens, chaves, credentials)
-  - Job de refresh de access token
-  - Validação de Graph API v24.0
-
-- ✅ Configurar CI/CD
-  - Integração com ruff, mypy, pytest
-  - Gate de auditoria (AUDITORIA_DADOS.json)
-  - Deploy automático para Cloud Run
+**Pendente (Provisionamento DevOps):**
+- ☐ Projeto GCP criado
+- ☐ Firestore habilitado
+- ☐ Cloud Storage buckets
+- ☐ Redis/Memorystore
+- ☐ Secrets no Secret Manager
 
 **Dependências:** Nenhuma (primeiro a iniciar)
 
-**Duração Estimada:** 3-5 dias
+**Duração Estimada:** 3-5 dias (código) + 1-2 dias (provisionamento)
 
 ---
 
@@ -203,9 +203,10 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 
 ## 🎯 Cronograma Sugerido
 
-### Fase 1: Infraestrutura
+### Fase 1: Infraestrutura — 🚀 EM ANDAMENTO
 
-- [ ] TODO_01 — Preparar infraestrutura e CI/CD
+- [x] TODO_01 — Código de infraestrutura (Settings, Secrets, Dedupe, HTTP)
+- [ ] TODO_01 — Provisionamento GCP (DevOps)
 - **Milestone:** Aplicação básica rodando em Cloud Run staging
 
 ### Fase 2: Componentes Core

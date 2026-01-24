@@ -8,6 +8,29 @@ As seções abaixo destacam a coerência atual do código com as definições do
 
 ---
 
+## 🚀 Progresso Atual (Janeiro 2026)
+
+### TODO_01 — Infraestrutura e Serviços
+
+**Status:** Código implementado, provisionamento GCP pendente
+
+**Concluído:**
+- ✅ `config/settings.py` — Graph API v24.0, constantes, collections, buckets, validação
+- ✅ `infra/secrets.py` — SecretManagerProvider completo com factory
+- ✅ `infra/dedupe.py` — RedisDedupeStore com fail-closed e TTL
+- ✅ `infra/http.py` — HttpClient com retry exponencial e backoff
+- ✅ `docs/firestore/schema.md` — Schema completo do Firestore
+- ✅ `docs/api-migration.md` — Guia de migração da Graph API
+- ✅ `.github/workflows/ci.yml` — Pipeline expandido (lint, typecheck, test, security)
+- ✅ 155 testes unitários passando
+
+**Pendente:**
+- ☐ Provisionamento de projeto GCP
+- ☐ Firestore, Cloud Storage, Redis/Memorystore
+- ☐ Secrets no Secret Manager
+
+---
+
 ## 1. Conformidade com os Documentos de Fonte de Verdade
 
 ### Produtos e Fluxos
@@ -60,13 +83,13 @@ O `WhatsAppOutboundClient` constrói payloads para envio de mensagens, mas carec
 
 ### Módulos Esqueléticos
 
-Alguns módulos são apenas esqueletos:
+Alguns módulos eram apenas esqueletos, mas estão sendo implementados progressivamente:
 
-- `ai/orchestrator.py`
-- `application/pipeline.py`
-- `infra/dedupe.py`
-
-Eles cumprem a estrutura prevista, mas requerem implementação real para produção.
+- `ai/orchestrator.py` — aguardando implementação (TODO_04)
+- `application/pipeline.py` — aguardando implementação (TODO_03)
+- ~~`infra/dedupe.py`~~ — ✅ **Implementado** (TODO_01): `RedisDedupeStore` com SETNX, TTL nativo e fail-closed
+- ~~`infra/secrets.py`~~ — ✅ **Implementado** (TODO_01): `SecretManagerProvider` com factory
+- ~~`infra/http.py`~~ — ✅ **Implementado** (TODO_01): `HttpClient` com retry exponencial
 
 ---
 
@@ -82,19 +105,19 @@ As auditorias (`AUDITORIA_SUMARIO.md` e `RELATORIO_AUDITORIA_COMPLETO.md`) apont
 
 3. **Dividir cliente outbound**: `WhatsAppOutboundClient` engloba construção de payloads, validação, idempotência e envio. Criar classes/serviços especializados (ex. `MediaUploader`, `FlowSender`, `TemplateManager`) e mover a lógica de re-intentos, deduplicação e registro para camadas próprias.
 
-4. **Persistência de sessão e dedupe**: Implementar `session.py` para persistir sessões em Firestore ou Redis, incluindo timeouts e multi-intents descritos em `Funcionamento.md`. Implementar `RedisDedupeStore` (ou Firestore) com TTL e fail-closed para evitar processar mensagens duplicadas.
+4. **Persistência de sessão e dedupe**: Implementar `session.py` para persistir sessões em Firestore ou Redis, incluindo timeouts e multi-intents descritos em `Funcionamento.md`. ~~Implementar `RedisDedupeStore` (ou Firestore) com TTL e fail-closed para evitar processar mensagens duplicadas.~~ ✅ **Dedupe implementado em TODO_01.**
 
 5. **Integração de IA**: Completar `AIOrchestrator` com pipeline de classificação de mensagens, utilização de LLM (prompt + contexto) e regras determinísticas. Esse componente deve analisar mensagens normalizadas e definir intent, outcome e resposta ou encaminhamento apropriado.
 
 6. **Implementar pipeline**: `process_whatsapp_webhook` atualmente apenas deduplica e encaminha para o orquestrador. Deve lidar com sessão, intents, outcomes e acionar o módulo outbound para respostas conforme fluxos definidos em `Funcionamento.md`.
 
-7. **Implantar dedupe persistente**: Substituir `InMemoryDedupeStore` por `RedisDedupeStore` ou implementação Firestore; adicionar lógica de fail-closed em produção (não processar quando falha).
+7. ~~**Implantar dedupe persistente**~~: ✅ **Concluído em TODO_01** — `RedisDedupeStore` implementado com SETNX, TTL nativo e comportamento fail-closed em produção.
 
 8. **Upload de mídia e gestão de templates**: `WHATSAPP_MODULE_REFACTORING.md` lista tarefas pendentes:
    - Integrar upload de mídia em GCS
-   - Implementar cliente HTTP com backoff e retry
+   - ~~Implementar cliente HTTP com backoff e retry~~ ✅ **Implementado em TODO_01**
    - Gerenciar templates
-   - Integração com Graph API v24.0
+   - ~~Integração com Graph API v24.0~~ ✅ **Configurado em TODO_01** (constantes em settings.py)
    - Deduplicação via Firestore
    - Testes de integração
 

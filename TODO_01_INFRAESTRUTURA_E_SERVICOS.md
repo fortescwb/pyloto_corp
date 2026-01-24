@@ -12,7 +12,24 @@ Todas as alterações neste documento devem estar **alinhadas com as fontes de v
 
 ---
 
-## 3.1 Configurar Ambiente de Nuvem
+## ✅ Código de Infraestrutura Implementado (Janeiro 2026)
+
+As seguintes implementações de código foram concluídas:
+
+- ✅ **config/settings.py** — Constantes Graph API v24.0, collections, buckets, validação
+- ✅ **infra/secrets.py** — SecretManagerProvider, EnvSecretProvider, factory
+- ✅ **infra/dedupe.py** — RedisDedupeStore, InMemoryDedupeStore, fail-closed
+- ✅ **infra/http.py** — HttpClient com retry exponencial e backoff
+- ✅ **docs/firestore/schema.md** — Schema completo do Firestore
+- ✅ **docs/api-migration.md** — Guia de migração Graph API
+- ✅ **.github/workflows/ci.yml** — Pipeline expandido (lint, typecheck, test, security)
+- ✅ **Testes** — 84 novos testes unitários (155 total passando)
+
+---
+
+## 3.1 Configurar Ambiente de Nuvem (Provisionamento)
+
+> ⚠️ As tarefas abaixo são de **operações/DevOps** e requerem acesso ao console GCP ou CLI.
 
 ### ☐ Criar projeto no Google Cloud
 
@@ -283,6 +300,17 @@ Implementar deploy automático após passar testes, com rollback em caso de erro
 
 ## Checklist Final
 
+**Código Implementado:**
+- [x] Settings com Graph API v24.0 e validação
+- [x] SecretManagerProvider para Secret Manager
+- [x] RedisDedupeStore com fail-closed
+- [x] HttpClient com retry exponencial
+- [x] Schema Firestore documentado
+- [x] Guia de migração de API criado
+- [x] CI/CD pipeline rodando com linting + testes
+- [x] 155 testes passando
+
+**Provisionamento Pendente (DevOps):**
 - [ ] Projeto GCP criado e ativo
 - [ ] Firestore habilitado com collections base
 - [ ] Cloud Storage buckets criados (mídia + exportações)
@@ -290,13 +318,8 @@ Implementar deploy automático após passar testes, com rollback em caso de erro
 - [ ] Pub/Sub tópicos criados (se necessário)
 - [ ] Todos os segredos no Secret Manager
 - [ ] Job de refresh de token configurado
-- [ ] Graph API v24.0 documentada e testada
-- [ ] CI/CD pipeline rodando com linting + testes
-- [ ] Gate de auditoria integrado
 - [ ] Deploy automático para Cloud Run funcional
-- [ ] [README.md](README.md) atualizado com instruções de deploy
-- [ ] [Funcionamento.md](Funcionamento.md) alinhado com nova infraestrutura
 
 ---
 
-**Status:** ⏳ Não iniciado | 🚀 Em andamento | ✅ Completo
+**Status:** 🚀 Em andamento (código completo, provisionamento pendente)

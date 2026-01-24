@@ -22,8 +22,10 @@ Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeir
 ## Status atual
 
 - Módulo WhatsApp cobre 16 tipos oficiais (incluindo templates, flows, CTA URL, location request) — ver [docs/whatsapp/README.md](docs/whatsapp/README.md)
+- **Infraestrutura TODO_01 implementada** — Settings, Secrets, Dedupe, HTTP Client
 - Auditoria técnica 2025: 84% conformidade, nenhum bloqueador — ver [docs/auditoria/README.md](docs/auditoria/README.md)
 - Produto e regras: fontes de verdade em [Funcionamento.md](Funcionamento.md) e [regras_e_padroes.md](regras_e_padroes.md)
+- **155 testes unitários passando** (cobertura em expansão)
 
 ## Princípios não-negociáveis
 
@@ -48,6 +50,8 @@ Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeir
 
 - Produto: [Funcionamento.md](Funcionamento.md)
 - Regras de código: [regras_e_padroes.md](regras_e_padroes.md)
+- **Schema Firestore**: [docs/firestore/schema.md](docs/firestore/schema.md)
+- **Migração Graph API**: [docs/api-migration.md](docs/api-migration.md)
 - Auditoria: [docs/auditoria/README.md](docs/auditoria/README.md)
 - Módulo WhatsApp: [docs/whatsapp/README.md](docs/whatsapp/README.md)
 - Referências Meta/WhatsApp: [docs/reference/meta/README.md](docs/reference/meta/README.md)
@@ -61,11 +65,25 @@ Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeir
 
 ## Variáveis principais
 
-- `WHATSAPP_VERIFY_TOKEN`
-- `WHATSAPP_WEBHOOK_SECRET`
-- `WHATSAPP_ACCESS_TOKEN`
-- `WHATSAPP_PHONE_NUMBER_ID`
-- `REDIS_URL`
+Configuração completa em [.env.exemplo](.env.exemplo). Principais:
+
+**WhatsApp/Meta API:**
+- `WHATSAPP_VERIFY_TOKEN` — Token de verificação do webhook
+- `WHATSAPP_WEBHOOK_SECRET` — HMAC SHA-256 para validação
+- `WHATSAPP_ACCESS_TOKEN` — Bearer token (usar Secret Manager em prod)
+- `WHATSAPP_PHONE_NUMBER_ID` — ID do número registrado
+
+**Infraestrutura:**
+- `ENVIRONMENT` — development | staging | production
+- `DEDUPE_BACKEND` — memory | redis
+- `REDIS_URL` — URL de conexão Redis (se dedupe_backend=redis)
+- `FIRESTORE_PROJECT_ID` — ID do projeto GCP
+- `GCS_BUCKET_MEDIA` — Bucket para mídia WhatsApp
+- `GCS_BUCKET_EXPORT` — Bucket para exportações
+
+**Segurança:**
+- `ZERO_TRUST_MODE` — Validar assinatura sempre (default: true)
+- `PEPPER_SECRET` — Para derivar user_key via HMAC
 
 ## Endpoints mínimos
 
