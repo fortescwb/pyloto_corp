@@ -107,7 +107,7 @@ As auditorias (`AUDITORIA_SUMARIO.md` e `RELATORIO_AUDITORIA_COMPLETO.md`) apont
     - Exportação
     - Dedupe
     - Outbound
-    
+
     Incluir testes de carga para validar performance com lote máximo de 100 mensagens, conforme `Settings`.
 
 11. **Observabilidade e monitoramento**: Expandir logs estruturados com métricas de desempenho, métricas de sucesso/erro nas chamadas à API Meta, monitoramento de filas e sessões. Configurar alertas de saúde e dashboards.
@@ -121,7 +121,7 @@ As auditorias (`AUDITORIA_SUMARIO.md` e `RELATORIO_AUDITORIA_COMPLETO.md`) apont
     - Link para o guia de integração com WhatsApp Flows
     - Documentação de endpoints de webhook, exportação e endpoints internos (ex. para Flows)
 
-14. **Segurança**: 
+14. **Segurança**:
     - Assegurar que todos os dados sensíveis estejam mascarados nos logs e exports
     - Validar assinaturas dos webhooks com `verify_meta_signature` sempre que `zero_trust_mode` estiver ativo
     - Implementar criptografia de payloads de Flow conforme o guia de end-to-end encryption da Meta
