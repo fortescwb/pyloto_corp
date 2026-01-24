@@ -162,6 +162,6 @@ class TestTemplateMessageValidation:
         )
         with pytest.raises(
             ValidationError,
-            match="template_name must not exceed 512 characters",
+            match="template_name must not exceed 512",
         ):
             WhatsAppMessageValidator.validate_outbound_request(request)

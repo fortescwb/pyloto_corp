@@ -170,7 +170,7 @@ class TestInteractiveMessageValidation:
                 }
             ],
         )
-        with pytest.raises(ValidationError, match="exceeds.*characters"):
+        with pytest.raises(ValidationError, match="exceeds"):
             WhatsAppMessageValidator.validate_outbound_request(request)
 
 

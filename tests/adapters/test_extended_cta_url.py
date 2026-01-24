@@ -102,7 +102,7 @@ class TestCTAURLOutboundPayloads:
         )
         WhatsAppMessageValidator.validate_outbound_request(request)
 
-        payload = self._client()._build_payload(request)
+        payload = self._client()._build_payload_safe(request)
         interactive = payload["interactive"]
         action = interactive["action"]
 
