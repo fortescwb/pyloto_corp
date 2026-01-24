@@ -5,15 +5,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import (
-    APIRouter, Depends, HTTPException, Query, Request, Response, status
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from pyloto_corp.adapters.whatsapp.signature import verify_meta_signature
 from pyloto_corp.ai.orchestrator import AIOrchestrator
-from pyloto_corp.api.dependencies import (
-    get_dedupe_store, get_orchestrator, get_settings
-)
+from pyloto_corp.api.dependencies import get_dedupe_store, get_orchestrator, get_settings
 from pyloto_corp.application.pipeline import process_whatsapp_webhook
 from pyloto_corp.config.settings import Settings
 from pyloto_corp.infra.dedupe import DedupeStore

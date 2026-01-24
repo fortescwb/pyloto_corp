@@ -1,0 +1,297 @@
+"""Testes unitários para infra/http.py.
+
+Valida cliente HTTP com retry, timeout e logging.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
+
+from pyloto_corp.config.settings import Settings
+from pyloto_corp.infra.http import (
+    HttpClient,
+    HttpClientConfig,
+    HttpError,
+    create_http_client,
+)
+
+
+class TestHttpClientConfig:
+    """Testes para HttpClientConfig."""
+
+    def test_default_values(self) -> None:
+        """Valores padrão devem ser seguros."""
+        config = HttpClientConfig()
+        assert config.timeout_seconds == 30.0
+        assert config.max_retries == 3
+        assert config.backoff_base_seconds == 2.0
+        assert config.verify_ssl is True
+
+    def test_custom_values(self) -> None:
+        """Deve aceitar valores customizados."""
+        config = HttpClientConfig(
+            timeout_seconds=10.0,
+            max_retries=5,
+            backoff_base_seconds=1.0,
+        )
+        assert config.timeout_seconds == 10.0
+        assert config.max_retries == 5
+
+
+class TestHttpError:
+    """Testes para HttpError."""
+
+    def test_error_with_status_code(self) -> None:
+        """Deve armazenar status code."""
+        error = HttpError("Not found", status_code=404)
+        assert error.status_code == 404
+        assert str(error) == "Not found"
+
+    def test_error_retryable_flag(self) -> None:
+        """Deve armazenar flag de retryable."""
+        error = HttpError("Server error", status_code=500, is_retryable=True)
+        assert error.is_retryable is True
+
+
+class TestHttpClient:
+    """Testes para HttpClient."""
+
+    @pytest.fixture
+    def client(self) -> HttpClient:
+        """Fixture para cliente com config padrão."""
+        return HttpClient(HttpClientConfig(max_retries=2))
+
+    def test_sanitize_url_removes_token(self, client: HttpClient) -> None:
+        """Deve remover access_token da URL."""
+        url = "https://api.example.com?access_token=secret123&other=value"
+        sanitized = client._sanitize_url(url)
+        assert "secret123" not in sanitized
+        assert "access_token=***" in sanitized
+        assert "other=value" in sanitized
+
+    def test_sanitize_url_preserves_clean_url(self, client: HttpClient) -> None:
+        """Deve preservar URL sem tokens."""
+        url = "https://api.example.com/path"
+        assert client._sanitize_url(url) == url
+
+    def test_is_retryable_status_429(self, client: HttpClient) -> None:
+        """429 (rate limit) deve ser retryable."""
+        assert client._is_retryable_status(429) is True
+
+    def test_is_retryable_status_5xx(self, client: HttpClient) -> None:
+        """5xx deve ser retryable."""
+        assert client._is_retryable_status(500) is True
+        assert client._is_retryable_status(502) is True
+        assert client._is_retryable_status(503) is True
+
+    def test_is_retryable_status_4xx(self, client: HttpClient) -> None:
+        """4xx (exceto 429) não deve ser retryable."""
+        assert client._is_retryable_status(400) is False
+        assert client._is_retryable_status(401) is False
+        assert client._is_retryable_status(404) is False
+
+    def test_calculate_backoff(self, client: HttpClient) -> None:
+        """Backoff deve ser exponencial."""
+        # attempt 0: 2^0 * 2 = 2
+        assert client._calculate_backoff(0) == 2.0
+        # attempt 1: 2^1 * 2 = 4
+        assert client._calculate_backoff(1) == 4.0
+        # attempt 2: 2^2 * 2 = 8
+        assert client._calculate_backoff(2) == 8.0
+
+    def test_calculate_backoff_respects_max(self) -> None:
+        """Backoff deve respeitar máximo configurado."""
+        config = HttpClientConfig(
+            backoff_base_seconds=2.0,
+            backoff_max_seconds=10.0,
+        )
+        client = HttpClient(config)
+        # attempt 5: 2^5 * 2 = 64, mas max é 10
+        assert client._calculate_backoff(5) == 10.0
+
+
+class TestHttpClientAsync:
+    """Testes assíncronos para HttpClient."""
+
+    @pytest.fixture
+    def mock_response(self) -> MagicMock:
+        """Fixture para response mockado."""
+        response = MagicMock(spec=httpx.Response)
+        response.status_code = 200
+        response.is_success = True
+        return response
+
+    @pytest.mark.asyncio
+    async def test_get_success(self, mock_response: MagicMock) -> None:
+        """GET deve retornar response em sucesso."""
+        client = HttpClient()
+
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.request.return_value = mock_response
+        mock_httpx_client.is_closed = False
+        client._client = mock_httpx_client
+
+        response = await client.get("https://api.example.com")
+
+        assert response.status_code == 200
+        mock_httpx_client.request.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_post_with_json(self, mock_response: MagicMock) -> None:
+        """POST deve enviar JSON."""
+        client = HttpClient()
+
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.request.return_value = mock_response
+        mock_httpx_client.is_closed = False
+        client._client = mock_httpx_client
+
+        payload = {"key": "value"}
+        await client.post("https://api.example.com", json=payload)
+
+        mock_httpx_client.request.assert_called_once_with(
+            "POST",
+            "https://api.example.com",
+            json=payload,
+        )
+
+    @pytest.mark.asyncio
+    async def test_retry_on_5xx(self) -> None:
+        """Deve fazer retry em erros 5xx."""
+        config = HttpClientConfig(max_retries=2)
+        client = HttpClient(config)
+
+        # Primeira e segunda chamadas: 500
+        # Terceira chamada: 200
+        error_response = MagicMock(spec=httpx.Response)
+        error_response.status_code = 500
+        error_response.is_success = False
+
+        success_response = MagicMock(spec=httpx.Response)
+        success_response.status_code = 200
+        success_response.is_success = True
+
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.is_closed = False
+        mock_httpx_client.request.side_effect = [
+            error_response,
+            error_response,
+            success_response,
+        ]
+        client._client = mock_httpx_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            response = await client.get("https://api.example.com")
+
+        assert response.status_code == 200
+        assert mock_httpx_client.request.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_no_retry_on_4xx(self) -> None:
+        """Não deve fazer retry em erros 4xx."""
+        config = HttpClientConfig(max_retries=3)
+        client = HttpClient(config)
+
+        error_response = MagicMock(spec=httpx.Response)
+        error_response.status_code = 400
+        error_response.is_success = False
+
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.is_closed = False
+        mock_httpx_client.request.return_value = error_response
+        client._client = mock_httpx_client
+
+        with pytest.raises(HttpError) as exc_info:
+            await client.get("https://api.example.com")
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.is_retryable is False
+        # Só uma chamada, sem retry
+        assert mock_httpx_client.request.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_exhaust_retries(self) -> None:
+        """Deve levantar erro após esgotar retries."""
+        config = HttpClientConfig(max_retries=2)
+        client = HttpClient(config)
+
+        error_response = MagicMock(spec=httpx.Response)
+        error_response.status_code = 503
+        error_response.is_success = False
+
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.is_closed = False
+        mock_httpx_client.request.return_value = error_response
+        client._client = mock_httpx_client
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            with pytest.raises(HttpError) as exc_info:
+                await client.get("https://api.example.com")
+
+        assert exc_info.value.status_code == 503
+        # 1 tentativa inicial + 2 retries = 3 chamadas
+        assert mock_httpx_client.request.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_context_manager(self) -> None:
+        """Deve funcionar como async context manager."""
+        async with HttpClient() as client:
+            assert client is not None
+
+    @pytest.mark.asyncio
+    async def test_close_client(self) -> None:
+        """close() deve fechar o cliente httpx."""
+        client = HttpClient()
+        mock_httpx_client = AsyncMock()
+        mock_httpx_client.is_closed = False
+        client._client = mock_httpx_client
+
+        await client.close()
+
+        mock_httpx_client.aclose.assert_called_once()
+
+
+class TestCreateHttpClient:
+    """Testes para factory function create_http_client."""
+
+    def test_creates_client_with_settings(self) -> None:
+        """Deve criar cliente com configurações de Settings."""
+        settings = Settings(
+            whatsapp_request_timeout_seconds=60,
+            whatsapp_max_retries=5,
+            whatsapp_retry_backoff_seconds=3,
+        )
+
+        client = create_http_client(settings)
+
+        assert client._config.timeout_seconds == 60.0
+        assert client._config.max_retries == 5
+        assert client._config.backoff_base_seconds == 3.0
+
+    def test_includes_user_agent(self) -> None:
+        """Deve incluir User-Agent com service_name/version."""
+        settings = Settings(service_name="test_service", version="1.2.3")
+
+        client = create_http_client(settings)
+
+        assert "User-Agent" in client._config.default_headers
+        assert "test_service/1.2.3" in client._config.default_headers["User-Agent"]
+
+    def test_verify_ssl_in_production(self) -> None:
+        """SSL deve ser verificado em produção."""
+        settings = Settings(environment="production")
+
+        client = create_http_client(settings)
+
+        assert client._config.verify_ssl is True
+
+    def test_verify_ssl_disabled_in_dev(self) -> None:
+        """SSL pode ser desabilitado em desenvolvimento."""
+        settings = Settings(environment="development")
+
+        client = create_http_client(settings)
+
+        assert client._config.verify_ssl is False
