@@ -1,9 +1,8 @@
 """Cliente outbound para envio de mensagens via Meta/WhatsApp.
 
 Responsabilidade:
-- Construir requisições conforme API Meta
+- Orquestrar validação e construção de payload
 - Gerenciar idempotência via dedupe_key
-- Implementar retry logic com backoff
 - Evitar exposição de secrets em logs
 - Rastrear envios para auditoria (sem PII)
 """
@@ -15,9 +14,17 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from pyloto_corp.adapters.whatsapp.models import OutboundMessageRequest, OutboundMessageResponse
-from pyloto_corp.adapters.whatsapp.validators import ValidationError, WhatsAppMessageValidator
-from pyloto_corp.domain.enums import InteractiveType, MessageType
+from pyloto_corp.adapters.whatsapp.models import (
+    OutboundMessageRequest,
+    OutboundMessageResponse,
+)
+from pyloto_corp.adapters.whatsapp.payload_builders.factory import (
+    build_full_payload,
+)
+from pyloto_corp.adapters.whatsapp.validators import (
+    ValidationError,
+    WhatsAppMessageValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,18 +48,21 @@ class OutboundMessage:
 
 
 class WhatsAppOutboundClient:
-    """Cliente para envio outbound (esqueleto com validação).
+    """Cliente para envio outbound via API Meta/WhatsApp.
 
-    TODO: integrar com HTTP client (httpx) e Meta API endpoint.
-    TODO: implementar retry loop com exponential backoff.
-    TODO: armazenar dedupe_key em Firestore para idempotência.
+    Orquestra validação, construção de payload e envio.
     """
 
-    def __init__(self, api_endpoint: str, access_token: str, phone_number_id: str):
+    def __init__(
+        self,
+        api_endpoint: str,
+        access_token: str,
+        phone_number_id: str,
+    ):
         """Inicializa o cliente.
 
         Args:
-            api_endpoint: URL base da API Meta (ex: https://graph.instagram.com/v20.0)
+            api_endpoint: URL base da API Meta
             access_token: Bearer token para autenticação
             phone_number_id: ID do número de telefone registrado
         """
@@ -61,18 +71,39 @@ class WhatsAppOutboundClient:
         self.phone_number_id = phone_number_id
         self.validator = WhatsAppMessageValidator()
 
-    def send_message(self, request: OutboundMessageRequest) -> OutboundMessageResponse:
+    def send_message(
+        self,
+        request: OutboundMessageRequest,
+    ) -> OutboundMessageResponse:
         """Envia uma mensagem individual.
 
         Args:
-            request: Requisição de envio validada
+            request: Requisição de envio
 
         Returns:
             Resposta do envio
         """
-        # Validar requisição
+        # 1. Validar requisição
+        validation_error = self._validate_request(request)
+        if validation_error:
+            return validation_error
+
+        # 2. Construir payload
+        payload_result = self._build_payload_safe(request)
+        if isinstance(payload_result, OutboundMessageResponse):
+            return payload_result
+
+        # 3. Enviar (mock por enquanto)
+        return self._send_mock(request)
+
+    def _validate_request(
+        self,
+        request: OutboundMessageRequest,
+    ) -> OutboundMessageResponse | None:
+        """Valida requisição e retorna erro se inválida."""
         try:
             self.validator.validate_outbound_request(request)
+            return None
         except ValidationError as exc:
             return OutboundMessageResponse(
                 success=False,
@@ -80,12 +111,15 @@ class WhatsAppOutboundClient:
                 error_message=str(exc),
             )
 
-        # Construir payload conforme tipo
+    def _build_payload_safe(
+        self,
+        request: OutboundMessageRequest,
+    ) -> dict[str, Any] | OutboundMessageResponse:
+        """Constrói payload com tratamento de erro."""
         try:
-            self._build_payload(request)
+            return build_full_payload(request)
         except Exception as exc:
             # Nunca registrar "to" (telefone) em logs - é PII.
-            # Usar apenas message_type e idempotency_key para rastreamento.
             logger.exception(
                 "Error building payload",
                 extra={
@@ -99,12 +133,12 @@ class WhatsAppOutboundClient:
                 error_message=str(exc),
             )
 
-        # TODO: enviar via HTTP (httpx)
-        # TODO: implementar retry logic
-        # TODO: registrar em Firestore para idempotência e auditoria
-
-        # Registrar apenas metadados não-PII: tipo de mensagem, categoria e
-        # idempotency_key para rastreamento. Nunca incluir "to" (telefone).
+    def _send_mock(
+        self,
+        request: OutboundMessageRequest,
+    ) -> OutboundMessageResponse:
+        """Envia mensagem (mock). TODO: integrar com HTTP client."""
+        # Registrar apenas metadados não-PII
         logger.info(
             "Message sent (mock)",
             extra={
@@ -113,14 +147,14 @@ class WhatsAppOutboundClient:
                 "idempotency_key": request.idempotency_key,
             },
         )
-
         return OutboundMessageResponse(
             success=True,
             message_id="mock_message_id",
         )
 
     def send_batch(
-        self, requests: list[OutboundMessageRequest]
+        self,
+        requests: list[OutboundMessageRequest],
     ) -> list[OutboundMessageResponse]:
         """Envia lote de mensagens.
 
@@ -130,192 +164,13 @@ class WhatsAppOutboundClient:
         Returns:
             Lista de respostas (uma por requisição, mesma ordem)
         """
-        responses: list[OutboundMessageResponse] = []
-        for request in requests:
-            response = self.send_message(request)
-            responses.append(response)
-        return responses
-
-    def _build_payload(self, request: OutboundMessageRequest) -> dict[str, Any]:
-        """Constrói o payload JSON para a API Meta.
-
-        Args:
-            request: Requisição de envio
-
-        Returns:
-            Payload pronto para enviar à Meta
-
-        Raises:
-            ValueError: Se payload inválido
-        """
-        msg_type = MessageType(request.message_type)
-
-        payload: dict[str, Any] = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": request.to,
-            "type": request.message_type,
-        }
-
-        # Template ou session message
-        if request.template_name:
-            payload["template"] = {
-                "name": request.template_name,
-                "language": {"code": "pt_BR"},
-            }
-            if request.template_params:
-                payload["template"]["components"] = [
-                    {
-                        "type": "body",
-                        "parameters": [
-                            {"type": "text", "text": str(p)} 
-                            for p in request.template_params.values()
-                        ],
-                    }
-                ]
-        else:
-            # Session message (free-form)
-            if msg_type == MessageType.TEXT:
-                payload[msg_type] = {"preview_url": False, "body": request.text}
-
-            elif msg_type in (MessageType.IMAGE, MessageType.VIDEO):
-                payload[msg_type] = self._build_media_object(
-                    request.media_id, request.media_url, request.text
-                )
-
-            elif msg_type == MessageType.AUDIO:
-                payload[msg_type] = self._build_media_object(
-                    request.media_id, request.media_url
-                )
-
-            elif msg_type == MessageType.DOCUMENT:
-                doc_obj = self._build_media_object(
-                    request.media_id, request.media_url, request.text
-                )
-                if request.media_filename:
-                    doc_obj["filename"] = request.media_filename
-                payload[msg_type] = doc_obj
-
-            elif msg_type == MessageType.LOCATION:
-                payload[msg_type] = {
-                    "latitude": request.location_latitude,
-                    "longitude": request.location_longitude,
-                    "name": request.location_name or None,
-                    "address": request.location_address or None,
-                }
-
-            elif msg_type == MessageType.ADDRESS:
-                payload[msg_type] = {
-                    "street": request.address_street or None,
-                    "city": request.address_city or None,
-                    "state": request.address_state or None,
-                    "zip_code": request.address_zip_code or None,
-                    "country_code": request.address_country_code or None,
-                }
-
-            elif msg_type == MessageType.INTERACTIVE:
-                payload[msg_type] = self._build_interactive_object(request)
-
-        # Adicionar idempotency_key se fornecido (x-idempotency-key header)
-        # será adicionado no HTTP client
-
-        return payload
-
-    def _build_media_object(
-        self, media_id: str | None, media_url: str | None, caption: str | None = None
-    ) -> dict[str, Any]:
-        """Constrói objeto de mídia para payload.
-
-        Args:
-            media_id: ID de mídia hospedada
-            media_url: URL pública para upload
-            caption: Legenda opcional
-
-        Returns:
-            Objeto media conforme API Meta
-        """
-        media_obj: dict[str, Any] = {}
-
-        if media_id:
-            media_obj["id"] = media_id
-        elif media_url:
-            media_obj["link"] = media_url
-
-        if caption:
-            media_obj["caption"] = caption
-
-        return media_obj
-
-    def _build_interactive_object(
-        self, request: OutboundMessageRequest
-    ) -> dict[str, Any]:
-        """Constrói objeto interativo para payload.
-
-        Args:
-            request: Requisição com dados interativos
-
-        Returns:
-            Objeto interactive conforme API Meta
-        """
-        # Validação já garante valor válido
-        int_type = InteractiveType(request.interactive_type)
-
-        interactive_obj: dict[str, Any] = {
-            "type": int_type.value,
-            "body": {"text": request.text},
-        }
-
-        if int_type == InteractiveType.BUTTON:
-            interactive_obj["action"] = {
-                "buttons": [
-                    {
-                        "type": "reply",
-                        "reply": {"id": btn["id"], "title": btn["title"]},
-                    }
-                    for btn in (request.buttons or [])
-                ]
-            }
-
-        elif int_type == InteractiveType.LIST:
-            interactive_obj["action"] = {
-                "button": "Ver opções",
-                "sections": request.buttons or [],
-            }
-
-        elif int_type == InteractiveType.FLOW:
-            interactive_obj["action"] = {
-                "name": "flow",
-                "parameters": {
-                    "flow_message_version": request.flow_message_version,
-                    "flow_token": request.flow_token,
-                    "flow_id": request.flow_id,
-                    "flow_cta": request.flow_cta,
-                    "flow_action": request.flow_action,
-                },
-            }
-
-        elif int_type == InteractiveType.CTA_URL:
-            interactive_obj["action"] = {
-                "name": "cta_url",
-                "parameters": {
-                    "display_text": request.cta_display_text,
-                    "url": request.cta_url,
-                },
-            }
-
-        elif int_type == InteractiveType.LOCATION_REQUEST_MESSAGE:
-            interactive_obj["action"] = {
-                "name": "send_location",
-            }
-
-        if request.footer:
-            interactive_obj["footer"] = {"text": request.footer}
-
-        return interactive_obj
+        return [self.send_message(req) for req in requests]
 
     @staticmethod
-    def _generate_dedupe_key(
-        to: str, message_type: str, content_hash: str
+    def generate_dedupe_key(
+        to: str,
+        message_type: str,
+        content_hash: str,
     ) -> str:
         """Gera chave de deduplicação baseada em conteúdo.
 
