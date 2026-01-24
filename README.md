@@ -54,12 +54,10 @@ Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeir
 
 ## Rodar local
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .[dev]
-uvicorn pyloto_corp.api.app:app --reload --port 8080
-```
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -e .[dev]
+    uvicorn pyloto_corp.api.app:app --reload --port 8080
 
 ## Variáveis principais
 

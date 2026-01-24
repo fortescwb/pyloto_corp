@@ -20,6 +20,7 @@ Todas as alterações neste documento devem estar **alinhadas com as fontes de v
 Configurar variáveis de ambiente e secrets para ambiente de staging.
 
 **Variáveis de Ambiente (Settings):**
+
 - `ENVIRONMENT` = "staging"
 - `WHATSAPP_PHONE_NUMBER_ID` = (ID de teste)
 - `WHATSAPP_ACCESS_TOKEN` = (token de teste do Meta)
@@ -36,12 +37,14 @@ Configurar variáveis de ambiente e secrets para ambiente de staging.
 - `LOG_LEVEL` = "INFO"
 
 **Critério de Aceitação:**
+
 - Variáveis definidas em `config/settings.py`
 - Secrets em Secret Manager
 - Cloud Run environment variables configurados
 - Testes de conectividade passando
 
 **Notas de Implementação:**
+
 - Usar números de teste do Meta para staging
 - Firestore staging separado de produção
 - Redis staging dedicado
@@ -55,6 +58,7 @@ Configurar variáveis de ambiente e secrets para ambiente de staging.
 Fazer deploy da aplicação em Cloud Run com configurações de staging.
 
 **Critério de Aceitação:**
+
 - Imagem Docker buildada
 - Deployada em Cloud Run
 - Revisão automática criada
@@ -62,6 +66,7 @@ Fazer deploy da aplicação em Cloud Run com configurações de staging.
 - URL acessível
 
 **Configurações Cloud Run:**
+
 - `min_instances` = 1
 - `max_instances` = 10
 - `memory` = 512MB
@@ -70,6 +75,7 @@ Fazer deploy da aplicação em Cloud Run com configurações de staging.
 - `concurrency` = 50
 
 **Notas de Implementação:**
+
 - Usar Dockerfile otimizado
 - Multi-stage build para reduzir tamanho
 - Health check em `/health`
@@ -83,6 +89,7 @@ Fazer deploy da aplicação em Cloud Run com configurações de staging.
 Registrar URL de webhook no console de desenvolvedor do Meta.
 
 **Passos:**
+
 1. Ir para Meta App Dashboard
 2. Selecionar aplicação
 3. Ir para WhatsApp → Configuration
@@ -91,12 +98,14 @@ Registrar URL de webhook no console de desenvolvedor do Meta.
 6. Subscribe to events: `messages`, `message_status`, `message_template_status_update`
 
 **Critério de Aceitação:**
+
 - Webhook registrado e validado pelo Meta
 - Teste de envio de mensagem funcional
 - Status de webhook mostra ativo
 - Logs mostram webhook recebido
 
 **Notas de Implementação:**
+
 - Documentar URL do webhook
 - Testar com webhook.site primeiro (opcional)
 - Verificar que assinatura está sendo validada
@@ -109,6 +118,7 @@ Registrar URL de webhook no console de desenvolvedor do Meta.
 Validar fluxo completo enviando mensagens de diferentes tipos.
 
 **Cenários de Teste:**
+
 1. Mensagem de texto simples
    - Enviar: "Olá"
    - Esperado: Resposta com vertentes da Pyloto
@@ -131,6 +141,7 @@ Validar fluxo completo enviando mensagens de diferentes tipos.
    - Esperado: Sessão encerrada com outcome
 
 **Critério de Aceitação:**
+
 - Todos os cenários passando
 - Fluxo de conversa natural
 - Deduplicação funcionando
@@ -138,6 +149,7 @@ Validar fluxo completo enviando mensagens de diferentes tipos.
 - Testes documentados
 
 **Notas de Implementação:**
+
 - Usar número de teste do Meta
 - Enviar de dispositivo real ou Postman
 - Capturar logs de processamento
@@ -151,18 +163,21 @@ Validar fluxo completo enviando mensagens de diferentes tipos.
 Simular volume esperado em produção para validar escala.
 
 **Parâmetros:**
+
 - Pico esperado: 1000 mensagens/minuto
 - Duração do teste: 10 minutos
 - Ramp-up: 2 minutos
 - Verificar: Latência p95 < 2s, Taxa de erro < 0.1%
 
 **Critério de Aceitação:**
+
 - Teste rodado com sucesso
 - Métricas de latência documentadas
 - Relatório de bottlenecks
 - Ajustes de scaling implementados
 
 **Notas de Implementação:**
+
 - Usar ferramenta (locust, Apache JMeter, etc.)
 - Usar dados reais de conversa
 - Monitorar recursos de Cloud Run
@@ -177,6 +192,7 @@ Simular volume esperado em produção para validar escala.
 Confirmar que deduplicação está funcionando e não duplica mensagens.
 
 **Teste:**
+
 1. Enviar mensagem X
 2. Imediatamente enviar mensagem X novamente
 3. Verificar que segunda foi dedupada
@@ -186,6 +202,7 @@ Confirmar que deduplicação está funcionando e não duplica mensagens.
 7. Verificar que foi processada
 
 **Critério de Aceitação:**
+
 - Dedup hit registrado em logs
 - Mensagem não foi processada 2x
 - TTL respeitado
@@ -199,6 +216,7 @@ Confirmar que deduplicação está funcionando e não duplica mensagens.
 Revisar logs para garantir que nenhuma informação sensível está sendo registrada.
 
 **Verificações:**
+
 - [ ] Sem phone number em plaintext
 - [ ] Sem email em plaintext
 - [ ] Sem PII de usuário
@@ -209,11 +227,13 @@ Revisar logs para garantir que nenhuma informação sensível está sendo regist
 - [ ] Levels apropriados (INFO, WARN, ERROR)
 
 **Critério de Aceitação:**
+
 - Auditoria completa de logs
 - Relatório de violações corrigidas
 - Aprovação de segurança
 
 **Notas de Implementação:**
+
 - Usar Cloud Logging para buscar patterns
 - Exemplo: search "phone" para encontrar exposes
 - Usar regex para validar masking
@@ -227,12 +247,14 @@ Revisar logs para garantir que nenhuma informação sensível está sendo regist
 Validar que correlation IDs estão sendo gerados e propagados em toda requisição.
 
 **Teste:**
+
 1. Enviar requisição de webhook
 2. Procurar correlation_id nos logs
 3. Seguir mesmo ID em múltiplos logs
 4. Verificar que está em resposta (se aplicável)
 
 **Critério de Aceitação:**
+
 - Correlation ID gerado por requisição
 - Propagado em todo o contexto
 - Rastreável em logs
@@ -246,6 +268,7 @@ Validar que correlation IDs estão sendo gerados e propagados em toda requisiç�
 Monitorar latência de processamento e identificar gargalos.
 
 **Métricas a Acompanhar:**
+
 - Latência webhook → webhook_return: p50, p95, p99
 - Latência normalização: ms
 - Latência classificação (IA): ms
@@ -253,12 +276,14 @@ Monitorar latência de processamento e identificar gargalos.
 - Total end-to-end: ms
 
 **Critério de Aceitação:**
+
 - Métricas visíveis em dashboard
 - P95 < 2s em condições normais
 - Gargalos identificados
 - Relatório de findings
 
 **Notas de Implementação:**
+
 - Usar Cloud Monitoring ou Prometheus
 - Criar dashboard customizado
 - Configurar alertas para anomalias
@@ -272,17 +297,20 @@ Monitorar latência de processamento e identificar gargalos.
 Monitorar taxa de erro e tipos de erro mais comuns.
 
 **Métricas:**
+
 - Erro rate total: %
 - Erro rate por tipo de mensagem: %
 - Erro rate por tipo (4xx, 5xx, timeout): %
 - Distribuição de erros top 10
 
 **Critério de Aceitação:**
+
 - Taxa de erro < 0.1% em staging
 - Principais causas identificadas
 - Correções implementadas
 
 **Notas de Implementação:**
+
 - Usar alertas: rate > 1% → Aviso
 - Revisar logs de erro
 - Implementar retry onde apropriado
@@ -296,6 +324,7 @@ Monitorar taxa de erro e tipos de erro mais comuns.
 Fazer fine-tuning de parâmetros baseado em observations em staging.
 
 **Parâmetros a Ajustar:**
+
 - `dedupe_ttl_seconds` — Se muitos duplicados mesmo com TTL alto, aumentar
 - `session_timeout_inactive_minutes` — Se muitas timeouts prematuros, aumentar
 - `ai_classification_timeout_seconds` — Se muitos timeouts de IA, aumentar
@@ -304,6 +333,7 @@ Fazer fine-tuning de parâmetros baseado em observations em staging.
 - `cloud_run_max_instances` — Se fila acumulando, aumentar
 
 **Critério de Aceitação:**
+
 - Ajustes documentados
 - Métricas re-verificadas pós-ajuste
 - Performance melhorada
@@ -318,6 +348,7 @@ Fazer fine-tuning de parâmetros baseado em observations em staging.
 Assegurar que toda documentação está atualizada e pronta para produção.
 
 **Documentação a Revisar:**
+
 - [ ] `README.md` — Instruções atualizadas
 - [ ] `DEPLOYMENT_GUIDE.md` — Guia de deploy completo
 - [ ] `docs/whatsapp/README.md` — Especificação de tipos de mensagem
@@ -329,6 +360,7 @@ Assegurar que toda documentação está atualizada e pronta para produção.
 - [ ] `docs/performance/` — Documentação de performance
 
 **Critério de Aceitação:**
+
 - Toda documentação relevante atualizada
 - Links válidos
 - Exemplos funcionais
@@ -342,12 +374,14 @@ Assegurar que toda documentação está atualizada e pronta para produção.
 Criar guias para equipes que integram com pyloto_corp.
 
 **Documentação:**
+
 - Manual de uso para equipe de atendimento (handoff, contexto)
 - Manual de uso para equipe de engenharia (integração, troubleshoot)
 - FAQ de problemas comuns
 - Troubleshooting guide
 
 **Critério de Aceitação:**
+
 - Documentação completa e clara
 - Exemplos reais
 - Contatos de suporte documentados
@@ -360,6 +394,7 @@ Criar guias para equipes que integram com pyloto_corp.
 Executar pentest para identificar vulnerabilidades antes de produção.
 
 **Escopo:**
+
 - OWASP Top 10
 - Injeção SQL (se aplicável)
 - XSS (se aplicável)
@@ -370,12 +405,14 @@ Executar pentest para identificar vulnerabilidades antes de produção.
 - Tratamento de erro
 
 **Critério de Aceitação:**
+
 - Pentest executado
 - Relatório gerado
 - Vulnerabilidades críticas corrigidas
 - Aprovação de segurança
 
 **Notas de Implementação:**
+
 - Contratar pentest externo (recomendado)
 - Ou usar ferramentas (ZAP, Burp)
 - Documentar achados
@@ -389,6 +426,7 @@ Executar pentest para identificar vulnerabilidades antes de produção.
 Auditoria completa de conformidade com regulações.
 
 **Checklist LGPD/GDPR:**
+
 - [ ] Consentimento documentado
 - [ ] Direito ao esquecimento implementado
 - [ ] Dados mascarados em logs
@@ -400,11 +438,13 @@ Auditoria completa de conformidade com regulações.
 - [ ] Data Processing Agreement com GCP
 
 **Critério de Aceitação:**
+
 - Auditoria completa
 - Não-conformidades corrigidas
 - Aprovação de jurídico/compliance
 
 **Notas de Implementação:**
+
 - Envolver jurídico/compliance desde início
 - Documentar tudo em `docs/compliance/`
 - Preparar para auditorias externas
@@ -417,16 +457,19 @@ Auditoria completa de conformidade com regulações.
 Validar que código está em conformidade com relatórios de auditoria técnica.
 
 **Referência:**
+
 - `GUIA_LEITURA_AUDITORIA.md` — Checklist de auditoria
 - `AUDITORIA_DADOS.json` — Dados de auditoria anterior
 
 **Critério de Aceitação:**
+
 - Todas as findings da auditoria anterior corrigidas
 - Novo scan de auditoria executado
 - Conformidade >85%
 - Aprovação assinada
 
 **Notas de Implementação:**
+
 - Rodar `ruff`, `mypy` novamente
 - Revisar `AUDITORIA_DADOS.json`
 - Documentar exceções aprovadas
@@ -442,6 +485,7 @@ Validar que código está em conformidade com relatórios de auditoria técnica.
 Fazer deploy em produção com mesma configuração de staging.
 
 **Passos:**
+
 1. Criar projeto GCP de produção separado
 2. Copiar infraestrutura (Firestore, Redis, GCS, Secrets)
 3. Atualizar variáveis (ENVIRONMENT=production, etc.)
@@ -449,12 +493,14 @@ Fazer deploy em produção com mesma configuração de staging.
 5. Validar health check
 
 **Critério de Aceitação:**
+
 - Aplicação rodando em produção
 - Health check passando
 - URL de webhook funcional
 - Integração com números reais de WhatsApp
 
 **Notas de Implementação:**
+
 - Usar terraform/IaC se possível
 - Documentar processo em runbook
 - Preparar rollback plan
@@ -467,6 +513,7 @@ Fazer deploy em produção com mesma configuração de staging.
 Registrar URL de produção no Meta App Dashboard.
 
 **Critério de Aceitação:**
+
 - Webhook registrado
 - Validação do Meta bem-sucedida
 - Eventos começam a chegar
@@ -479,10 +526,12 @@ Registrar URL de produção no Meta App Dashboard.
 Preparar plano de migração de dados (se houver) e comunicar para stakeholders.
 
 **Cenários:**
+
 1. Primeira vez sem dados legados → Apenas deploy
 2. Com dados legados → Migração de conversas/usuários
 
 **Critério de Aceitação:**
+
 - Janela agendada
 - Stakeholders notificados
 - Rollback plan pronto
@@ -496,6 +545,7 @@ Preparar plano de migração de dados (se houver) e comunicar para stakeholders.
 Acompanhar intensamente os primeiros dias de produção.
 
 **Atividades:**
+
 - [ ] Monitorar dashboards continuamente
 - [ ] Revisar logs a cada 30 minutos
 - [ ] Verificar alertas em tempo real
@@ -504,12 +554,14 @@ Acompanhar intensamente os primeiros dias de produção.
 - [ ] Documentar issues encontrados
 
 **Critério de Aceitação:**
+
 - 7 dias sem issues críticos
 - Taxa de erro < 0.1%
 - Latência p95 < 2s
 - Aprovação para diminuir monitoramento
 
 **Notas de Implementação:**
+
 - Ter runbook de troubleshooting à mão
 - Contatos de suporte GCP/Meta disponíveis
 - Escalation path definido
@@ -524,6 +576,7 @@ Acompanhar intensamente os primeiros dias de produção.
 Acompanhar releases da Meta e atualizar quando necessário.
 
 **Processo:**
+
 1. Meta anuncia nova versão
 2. Revisar breaking changes
 3. Testar em staging com v nova
@@ -531,11 +584,13 @@ Acompanhar releases da Meta e atualizar quando necessário.
 5. Deploy em produção
 
 **Critério de Aceitação:**
+
 - Versão atual documentada em `Funcionamento.md`
 - Breaking changes documentados
 - Testes passando com nova versão
 
 **Notas de Implementação:**
+
 - Acompanhar Meta Release Notes
 - Manter suporte a versões anteriores (3+ meses)
 - Documentar compatibility matrix
@@ -548,12 +603,14 @@ Acompanhar releases da Meta e atualizar quando necessário.
 Implementar novos tipos de mensagem, templates ou features conforme Meta lança.
 
 **Exemplos:**
+
 - Novos tipos de Flow
 - Novas templatette variables
 - Novas button types
 - Shopping/product features
 
 **Processo:**
+
 1. Meta anuncia feature
 2. Avaliar relevância para pyloto_corp
 3. Implementar em staging
@@ -561,6 +618,7 @@ Implementar novos tipos de mensagem, templates ou features conforme Meta lança.
 5. Deploy em produção
 
 **Critério de Aceitação:**
+
 - Feature implementada
 - Documentada em `docs/whatsapp/`
 - Testada em staging
@@ -573,6 +631,7 @@ Implementar novos tipos de mensagem, templates ou features conforme Meta lança.
 Feedback loop para melhorias contínuas.
 
 **Fontes de Feedback:**
+
 - Equipe de atendimento (usabilidade, bugs)
 - Equipe de vendas (features pedidas)
 - Análise de logs (gargalos, errors)
@@ -580,6 +639,7 @@ Feedback loop para melhorias contínuas.
 - Usuários finais (via enquetes, etc.)
 
 **Processo:**
+
 1. Coletar feedback periodicamente
 2. Priorizar por impacto
 3. Implementar em sprint
@@ -587,6 +647,7 @@ Feedback loop para melhorias contínuas.
 5. Deploy em produção
 
 **Critério de Aceitação:**
+
 - Feedback loop estabelecido
 - Melhorias implementadas regularmente
 - Documentadas em changelog
@@ -599,6 +660,7 @@ Feedback loop para melhorias contínuas.
 Treinar/ajustar modelo de IA baseado em feedbacks e novos padrões.
 
 **Processo:**
+
 1. Coletar conversations do Firestore
 2. Marcar intenções/outcomes corretos (dataset)
 3. Retreinar modelo ou ajustar prompts
@@ -608,6 +670,7 @@ Treinar/ajustar modelo de IA baseado em feedbacks e novos padrões.
 7. Deploy completo
 
 **Critério de Aceitação:**
+
 - Accuracy melhorando
 - Feedback loop funcionando
 - Documentação de prompts atualizada
@@ -620,12 +683,14 @@ Treinar/ajustar modelo de IA baseado em feedbacks e novos padrões.
 Refinar fluxos conforme aprendizado operacional.
 
 **Exemplos de Ajustes:**
+
 - Adicionar nova pergunta que esclarece intent
 - Remover pergunta redundante
 - Ajustar mensagens (clareza, tom)
 - Adicionar novo fluxo (nova vertente, caso de uso)
 
 **Processo:**
+
 1. Identificar oportunidade (feedback, metrics)
 2. Desenhar novo fluxo
 3. Implementar em `AIOrchestrator` ou rules
@@ -635,6 +700,7 @@ Refinar fluxos conforme aprendizado operacional.
 7. Documentar em `Funcionamento.md`
 
 **Critério de Aceitação:**
+
 - Fluxo implementado
 - Testado
 - Documentado em `Funcionamento.md`
@@ -648,6 +714,7 @@ Refinar fluxos conforme aprendizado operacional.
 Acompanhar métricas de negócio para garantir alignment com objetivos.
 
 **KPIs:**
+
 - Conversão a HANDOFF_HUMAN: % de mensagens
 - Lead qualification: % de high/medium vs low
 - Session completion rate: % com outcome válido
@@ -656,11 +723,13 @@ Acompanhar métricas de negócio para garantir alignment com objetivos.
 - Time to lead: minutos
 
 **Frequência:**
+
 - Diária: Taxa de erro, latência
 - Semanal: Conversion, qualification
 - Mensal: KPIs, ROI, roadmap updates
 
 **Critério de Aceitação:**
+
 - Dashboard de KPIs criado
 - Reviews agendados regularmente
 - Ações baseadas em dados
@@ -670,6 +739,7 @@ Acompanhar métricas de negócio para garantir alignment com objetivos.
 ## Checklist Final
 
 ### Deploy em Staging
+
 - [ ] Configuração de staging criada
 - [ ] Deploy em Cloud Run bem-sucedido
 - [ ] Webhook registrado no Meta
@@ -682,6 +752,7 @@ Acompanhar métricas de negócio para garantir alignment com objetivos.
 - [ ] Taxa de erro aceitável
 
 ### Pré-Produção
+
 - [ ] Documentação atualizada
 - [ ] Guias de integração criados
 - [ ] Pentest realizado
@@ -690,6 +761,7 @@ Acompanhar métricas de negócio para garantir alignment com objetivos.
 - [ ] Runbooks de troubleshooting criados
 
 ### Deploy em Produção
+
 - [ ] Configuração de produção criada
 - [ ] Imagem Docker deployada
 - [ ] Webhook registrado no Meta
@@ -698,6 +770,7 @@ Acompanhar métricas de negócio para garantir alignment com objetivos.
 - [ ] Escalation path definido
 
 ### Manutenção Contínua
+
 - [ ] Processo de atualização de API documentado
 - [ ] Acompanhamento de features Meta iniciado
 - [ ] Feedback loop estabelecido

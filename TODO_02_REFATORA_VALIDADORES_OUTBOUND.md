@@ -22,27 +22,34 @@ Consolidar todos os limites, tamanhos máximos e constantes de validação em m�
 **Arquivo:**
 `src/pyloto_corp/adapters/whatsapp/limits.py`
 
-**Constantes a Definir:**
-- `MAX_MESSAGE_LENGTH_CHARS` — Comprimento máximo da mensagem de texto
-- `MAX_IMAGE_SIZE_MB` — Tamanho máximo de imagem
-- `MAX_VIDEO_SIZE_MB` — Tamanho máximo de vídeo
-- `MAX_AUDIO_SIZE_MB` — Tamanho máximo de áudio
-- `MAX_DOCUMENT_SIZE_MB` — Tamanho máximo de documento
-- `SUPPORTED_IMAGE_TYPES` — Lista de tipos MIME aceitos
-- `SUPPORTED_VIDEO_TYPES` — Lista de tipos MIME aceitos
-- `SUPPORTED_AUDIO_TYPES` — Lista de tipos MIME aceitos
-- `SUPPORTED_DOCUMENT_TYPES` — Lista de tipos MIME aceitos
+**Constantes a Definidas:**
+
+- `MAX_MESSAGE_LENGTH_CHARS` — Comprimento máximo da mensagem de texto = 4.096 caracteres
+- `MAX_IMAGE_SIZE_MB` — Tamanho máximo de imagem = 5mb
+- `MAX_VIDEO_SIZE_MB` — Tamanho máximo de vídeo = 16mb
+- `MAX_AUDIO_SIZE_MB` — Tamanho máximo de áudio = 16mb
+- `MAX_DOCUMENT_SIZE_MB` — Tamanho máximo de documento = 100mb
+- `SUPPORTED_IMAGE_TYPES` — Lista de tipos MIME aceitos = image/jpeg, image/png
+- `SUPPORTED_VIDEO_TYPES` — Lista de tipos MIME aceitos = video/mp4, video/3gpp
+- `SUPPORTED_AUDIO_TYPES` — Lista de tipos MIME aceitos = audio/aac, audio/mp4, audio/mpeg, audio/amr, audio/ogg (apenas com codecs opus)
+- `SUPPORTED_DOCUMENT_TYPES` — Lista de tipos MIME aceitos = Qualquer tipo MIME válido, incluindo text/plain, application/pdf, application/vnd.ms-powerpoint, application/msword, application/vnd.ms-excel e formatos Open Office
 - `MAX_INTERACTIVE_BUTTONS` — Número máximo de botões interativos
+  Botões de Resposta Rápida (Reply Buttons): Até 3 botões.
+  Botões de Chamada para Ação (CTA): Até 2 botões (um para site e um para telefone).
 - `MAX_LIST_ITEMS` — Número máximo de itens em lista
+  Até 10 itens no total, distribuídos em até 10 seções.
 - `MAX_TEMPLATE_PARAMETERS` — Número máximo de parâmetros em template
+  De acordo com a documentação oficial da Meta, não há um limite numérico estrito definido para o total de parâmetros (variáveis {{1}}, {{2}}, etc.), mas a mensagem final montada, incluindo todos os valores das variáveis, não pode exceder o limite de 1.024 caracteres do corpo do template.
 
 **Critério de Aceitação:**
+
 - Módulo criado com todas as constantes
 - Documentação com referência à Meta API v24.0
 - Sem valores hardcoded fora deste módulo
 - Todos os validadores importam daqui
 
 **Notas de Implementação:**
+
 - Adicionar comentários com links à documentação Meta
 - Considerar versionamento (ex.: `LIMITS_V24 = {...}`)
 - Facilitar updates quando Meta mudar limites
@@ -58,18 +65,21 @@ Classe responsável por validar mensagens de texto.
 `src/pyloto_corp/adapters/whatsapp/validators/text.py`
 
 **Responsabilidades:**
+
 - Validar comprimento (≤ `MAX_MESSAGE_LENGTH_CHARS`)
 - Validar caracteres especiais (conforme Meta API)
 - Validar variáveis de template (${1}, ${2}, etc.)
 - Retornar resultado estruturado com detalhes de erro
 
 **Critério de Aceitação:**
+
 - Classe implementada com método `validate() -> ValidationResult`
 - Testes unitários com cobertura >90%
 - Rejeita mensagens acima do limite
 - Aceita variáveis de template válidas
 
 **Notas de Implementação:**
+
 - Usar `pydantic` para `ValidationResult`
 - Mensagens de erro em português (conforme `regras_e_padroes.md`)
 - Considerar logs estruturados para rejeições
@@ -85,6 +95,7 @@ Classe responsável por validar mensagens com mídia (imagem, vídeo, áudio, do
 `src/pyloto_corp/adapters/whatsapp/validators/media.py`
 
 **Responsabilidades:**
+
 - Validar tipo MIME do arquivo
 - Validar tamanho do arquivo
 - Validar duração (vídeo, áudio)
@@ -92,12 +103,14 @@ Classe responsável por validar mensagens com mídia (imagem, vídeo, áudio, do
 - Retornar resultado estruturado com detalhes de erro
 
 **Critério de Aceitação:**
+
 - Classe implementada com método `validate(file_info) -> ValidationResult`
 - Testes unitários com cobertura >90%
 - Rejeita tipos MIME não suportados
 - Rejeita arquivos acima do tamanho limite
 
 **Notas de Implementação:**
+
 - Importar constantes de `limits.py`
 - Validar metadados de arquivo (sem necessidade de download completo)
 - Logs estruturados em caso de rejeição
@@ -113,6 +126,7 @@ Classe responsável por validar mensagens interativas (botões, listas, flows).
 `src/pyloto_corp/adapters/whatsapp/validators/interactive.py`
 
 **Responsabilidades:**
+
 - Validar número de botões (≤ `MAX_INTERACTIVE_BUTTONS`)
 - Validar número de itens em lista (≤ `MAX_LIST_ITEMS`)
 - Validar estrutura de resposta (id, title, description)
@@ -120,12 +134,14 @@ Classe responsável por validar mensagens interativas (botões, listas, flows).
 - Retornar resultado estruturado
 
 **Critério de Aceitação:**
+
 - Classe implementada com método `validate(interactive_msg) -> ValidationResult`
 - Testes unitários com cobertura >90%
 - Rejeita botões em excesso
 - Rejeita estruturas malformadas
 
 **Notas de Implementação:**
+
 - Suportar botões de ação, listas, flows
 - Validar IDs únicos dentro da mensagem
 - Logs estruturados para debug
@@ -141,6 +157,7 @@ Classe responsável por validar mensagens de template.
 `src/pyloto_corp/adapters/whatsapp/validators/template.py`
 
 **Responsabilidades:**
+
 - Validar namespace do template
 - Validar nome do template
 - Validar número de parâmetros (≤ `MAX_TEMPLATE_PARAMETERS`)
@@ -149,12 +166,14 @@ Classe responsável por validar mensagens de template.
 - Retornar resultado estruturado
 
 **Critério de Aceitação:**
+
 - Classe implementada com método `validate(template_msg) -> ValidationResult`
 - Testes unitários com cobertura >90%
 - Rejeita templates não registradas
 - Rejeita parâmetros inválidos
 
 **Notas de Implementação:**
+
 - Integrar com `TemplateManager` (quando disponível)
 - Validar contra cache local de templates
 - Logs estruturados para falhas
@@ -170,6 +189,7 @@ Refatorar classe existente para orquestrar os validadores especializados.
 `src/pyloto_corp/adapters/whatsapp/validators/__init__.py`
 
 **Responsabilidades:**
+
 - Receber mensagem normalizada
 - Determinar tipo (text, image, video, audio, document, interactive, template)
 - Delegar para validador apropriado
@@ -177,12 +197,14 @@ Refatorar classe existente para orquestrar os validadores especializados.
 - Retornar `ValidationResult` combinado
 
 **Critério de Aceitação:**
+
 - Classe refatorada para orquestrar validadores
 - Todos os testes existentes continuam passando
 - Novo método `validate() -> ValidationResult` implementado
 - Backward compatibility mantida onde necessário
 
 **Notas de Implementação:**
+
 - Usar injeção de dependência para validadores
 - Considerar cache de resultados
 - Facilitar adição de novos tipos de mensagem
@@ -200,6 +222,7 @@ Criar suite completa de testes para todos os validadores.
 **Casos de Teste por Validador:**
 
 **TextMessageValidator:**
+
 - Mensagem válida dentro do limite
 - Mensagem vazia
 - Mensagem exatamente no limite
@@ -209,6 +232,7 @@ Criar suite completa de testes para todos os validadores.
 - Variáveis de template inválidas
 
 **MediaMessageValidator:**
+
 - Arquivo de tipo suportado
 - Arquivo de tipo não suportado
 - Arquivo dentro do limite de tamanho
@@ -216,6 +240,7 @@ Criar suite completa de testes para todos os validadores.
 - Arquivo com metadados inválidos
 
 **InteractiveMessageValidator:**
+
 - Botões dentro do limite
 - Botões acima do limite
 - Lista dentro do limite de itens
@@ -224,18 +249,21 @@ Criar suite completa de testes para todos os validadores.
 - Payloads válidos
 
 **TemplateMessageValidator:**
+
 - Template válida com parâmetros corretos
 - Template com número errado de parâmetros
 - Template não registrada
 - Parâmetros de tipo inválido
 
 **Critério de Aceitação:**
+
 - Cobertura >90% em todos os validadores
 - Todos os testes passando
 - Testes de erro com mensagens claras
 - Fixtures reutilizáveis criadas
 
 **Notas de Implementação:**
+
 - Usar `pytest` com fixtures
 - Mock de constantes para testar edge cases
 - Documentar casos de teste em docstrings
@@ -253,6 +281,7 @@ Classe responsável por chamadas HTTP à Graph API Meta com retry, backoff e ide
 `src/pyloto_corp/adapters/whatsapp/http_client.py`
 
 **Responsabilidades:**
+
 - Executar requisições POST/GET/DELETE à Graph API
 - Implementar retry exponencial com backoff
 - Implementar idempotência via `idempotency_key`
@@ -261,6 +290,7 @@ Classe responsável por chamadas HTTP à Graph API Meta com retry, backoff e ide
 - Tratar erros específicos (rate limit, timeout, token inválido)
 
 **Interface:**
+
 ```python
 class WhatsAppHttpClient:
     async def send_message(
@@ -289,6 +319,7 @@ class WhatsAppHttpClient:
 ```
 
 **Critério de Aceitação:**
+
 - Classe implementada com métodos principais
 - Retry exponencial testado (máx 3 tentativas com backoff)
 - Idempotência via `idempotency_key` documentada
@@ -296,6 +327,7 @@ class WhatsAppHttpClient:
 - Logs estruturados sem PII
 
 **Notas de Implementação:**
+
 - Usar `aiohttp` ou `httpx` assíncrono
 - Timeout padrão: 30 segundos
 - Máximo de retries: 3
@@ -314,6 +346,7 @@ Classe responsável por upload de mídia em Google Cloud Storage com integraçã
 `src/pyloto_corp/adapters/whatsapp/media_uploader.py`
 
 **Responsabilidades:**
+
 - Fazer upload de arquivo para GCS bucket
 - Registrar metadados (tamanho, tipo, hash)
 - Fazer upload para WhatsApp API (se necessário)
@@ -322,6 +355,7 @@ Classe responsável por upload de mídia em Google Cloud Storage com integraçã
 - Tratar falhas com retry
 
 **Interface:**
+
 ```python
 class MediaUploader:
     async def upload(
@@ -339,6 +373,7 @@ class MediaUploader:
 ```
 
 **Critério de Aceitação:**
+
 - Classe implementada com métodos principais
 - Upload para GCS funcional
 - Dedupli cação por hash implementada
@@ -346,6 +381,7 @@ class MediaUploader:
 - Logs estruturados de upload/falha
 
 **Notas de Implementação:**
+
 - Usar cliente `google.cloud.storage`
 - Gerar hash MD5 de arquivo para dedup
 - Armazenar metadados em Firestore
@@ -363,6 +399,7 @@ Classe responsável por gerenciamento de templates (carregar, validar, sincroniz
 `src/pyloto_corp/adapters/whatsapp/template_manager.py`
 
 **Responsabilidades:**
+
 - Carregar templates do Firestore (cache local)
 - Sincronizar templates da Graph API periodicamente
 - Validar estrutura de template
@@ -370,6 +407,7 @@ Classe responsável por gerenciamento de templates (carregar, validar, sincroniz
 - Implementar cache com TTL
 
 **Interface:**
+
 ```python
 class TemplateManager:
     async def get_template(
@@ -386,6 +424,7 @@ class TemplateManager:
 ```
 
 **Critério de Aceitação:**
+
 - Classe implementada com métodos principais
 - Cache local em Firestore funcionando
 - Sincronização automática implementada
@@ -393,6 +432,7 @@ class TemplateManager:
 - Logs de sincronização estruturados
 
 **Notas de Implementação:**
+
 - Usar store `TemplateStore` (a criar)
 - Cache TTL: 24 horas
 - Sincronizar automaticamente a cada 12 horas
@@ -410,6 +450,7 @@ Classe responsável por envio de mensagens Flow com criptografia/decriptografia 
 `src/pyloto_corp/adapters/whatsapp/flow_sender.py`
 
 **Responsabilidades:**
+
 - Construir mensagem Flow para envio
 - Implementar validação de assinatura (`flow_token_signature`)
 - Implementar resposta com criptografia AES-GCM
@@ -417,6 +458,7 @@ Classe responsável por envio de mensagens Flow com criptografia/decriptografia 
 - Registrar logs estruturados
 
 **Interface:**
+
 ```python
 class FlowSender:
     async def send_flow(
@@ -443,6 +485,7 @@ class FlowSender:
 ```
 
 **Critério de Aceitação:**
+
 - Classe implementada com métodos principais
 - Criptografia AES-GCM funcionando
 - Validação de assinatura implementada
@@ -450,6 +493,7 @@ class FlowSender:
 - Testes com flows reais (mocks)
 
 **Notas de Implementação:**
+
 - Usar `cryptography` library para AES-GCM
 - Chaves RSA armazenadas em Secret Manager
 - Renovar chaves conforme Meta recomenda
@@ -466,12 +510,14 @@ class FlowSender:
 Garantir que mensagens outbound não sejam enviadas duplicadas via idempotência persistente.
 
 **Critério de Aceitação:**
+
 - Store de `OutboundDedupeKey` criado em Firestore
 - `idempotency_key` incluído em todas as chamadas de envio
 - Retry de mesma mensagem com mesmo `idempotency_key` não causa envio duplicado
 - TTL configurável para cleanup de chaves antigas
 
 **Notas de Implementação:**
+
 - Usar `OutboundDedupeStore` (criar em Persistência e Stores)
 - Gerar `idempotency_key` consistente: hash(recipient_id + message_content + timestamp)
 - TTL: 24 horas (cobrir retries + reconciliação)

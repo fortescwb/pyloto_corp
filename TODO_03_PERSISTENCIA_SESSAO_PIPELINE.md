@@ -23,6 +23,7 @@ Dividir método `execute()` de 100+ linhas em sub-funções e classes auxiliares
 `src/pyloto_corp/application/export.py`
 
 **Métodos a Extrair:**
+
 - `_collect_data()` — Coleta conversas, perfis, logs de auditoria
 - `_anonymize_data()` — Mascara PII conforme configuração
 - `_render_export()` — Formata dados em HTML/JSON/PDF
@@ -30,12 +31,14 @@ Dividir método `execute()` de 100+ linhas em sub-funções e classes auxiliares
 - `_audit_export()` — Registra evento em audit log
 
 **Critério de Aceitação:**
+
 - Método `execute()` reduzido para ~30 linhas (orquestração)
 - Cada sub-método com responsabilidade única
 - Testes mantêm mesma cobertura (>85%)
 - Documentação de fluxo clara
 
 **Notas de Implementação:**
+
 - Usar injeção de dependência para stores
 - Logs estruturados em cada passo
 - Tratamento de erro em cada sub-método
@@ -52,12 +55,14 @@ Criar implementação concreta que salva exportações em GCS com URLs assinadas
 `src/pyloto_corp/infra/exporters/gcs_exporter.py`
 
 **Responsabilidades:**
+
 - Salvar arquivo exportado em bucket GCS (`export_bucket`)
 - Gerar URL assinada (válida por 7 dias)
 - Retornar metadados (path interno, URL, timestamp)
 - Implementar cleanup de exports antigos (retention policy)
 
 **Interface:**
+
 ```python
 class GcsHistoryExporter(HistoryExporterProtocol):
     async def export(
@@ -77,6 +82,7 @@ class GcsHistoryExporter(HistoryExporterProtocol):
 ```
 
 **Critério de Aceitação:**
+
 - Classe implementada com métodos principais
 - Testes com GCS emulador (ou mocks)
 - URLs assinadas gradas com expiração
@@ -84,6 +90,7 @@ class GcsHistoryExporter(HistoryExporterProtocol):
 - Logs estruturados
 
 **Notas de Implementação:**
+
 - Usar cliente `google.cloud.storage`
 - Formato padrão: JSON (com suporte a PDF futuro)
 - URL assinada com 7 dias de validade
@@ -102,6 +109,7 @@ Implementação concreta de `ConversationStore` usando Firestore.
 `src/pyloto_corp/infra/stores/conversation_store.py`
 
 **Responsabilidades:**
+
 - Salvar conversa em collection `conversations`
 - Recuperar conversa por ID
 - Listar conversas de usuário com paginação
@@ -109,7 +117,8 @@ Implementação concreta de `ConversationStore` usando Firestore.
 - Registrar eventos de transição
 
 **Schema:**
-```
+
+```schema sugerido
 /conversations/{conversation_id}
   ├── user_id: str
   ├── status: str (ACTIVE, CLOSED)
@@ -132,6 +141,7 @@ Implementação concreta de `ConversationStore` usando Firestore.
 ```
 
 **Critério de Aceitação:**
+
 - Store implementado com CRUD básico
 - Paginação com cursores funcionando
 - Ordenação por timestamp
@@ -139,6 +149,7 @@ Implementação concreta de `ConversationStore` usando Firestore.
 - Logs estruturados
 
 **Notas de Implementação:**
+
 - Usar indices composite para queries
 - Implementar soft delete (marcar como CLOSED)
 - Respeitar PII masking rules
@@ -155,6 +166,7 @@ Implementação concreta de `UserProfileStore` usando Firestore.
 `src/pyloto_corp/infra/stores/user_profile_store.py`
 
 **Responsabilidades:**
+
 - Salvar perfil de usuário em collection `user_profiles`
 - Recuperar perfil por ID
 - Atualizar perfil (nome, cidade, tipo)
@@ -162,7 +174,8 @@ Implementação concreta de `UserProfileStore` usando Firestore.
 - Registrar histórico de atualizações
 
 **Schema:**
-```
+
+```schema sugerido
 /user_profiles/{user_id}
   ├── phone: str (E164 format)
   ├── name: str
@@ -179,12 +192,14 @@ Implementação concreta de `UserProfileStore` usando Firestore.
 ```
 
 **Critério de Aceitação:**
+
 - Store implementado com CRUD básico
 - Dedup de phone funcionando
 - Testes com Firestore emulador
 - Logs estruturados de atualizações
 
 **Notas de Implementação:**
+
 - Phone em E164 format (ex.: +5511999999999)
 - Índice em `phone` para lookup rápido
 - Histórico em subcollection opcional
@@ -201,6 +216,7 @@ Implementação concreta de `AuditLogStore` com trilha encadeada (hashing).
 `src/pyloto_corp/infra/stores/audit_log_store.py`
 
 **Responsabilidades:**
+
 - Salvar evento de auditoria com hash encadeado
 - Validar integridade da cadeia
 - Recuperar trilha de auditoria de conversa
@@ -208,7 +224,8 @@ Implementação concreta de `AuditLogStore` com trilha encadeada (hashing).
 - Gerar relatório de auditoria
 
 **Schema:**
-```
+
+```schema sugerido
 /audit_logs/{log_id}
   ├── timestamp: timestamp
   ├── conversation_id: str
@@ -222,6 +239,7 @@ Implementação concreta de `AuditLogStore` com trilha encadeada (hashing).
 ```
 
 **Critério de Aceitação:**
+
 - Store implementado com append-only semantics
 - Hash encadeado funcionando (SHA256)
 - Validação de cadeia implementada
@@ -229,6 +247,7 @@ Implementação concreta de `AuditLogStore` com trilha encadeada (hashing).
 - Testes com Firestore emulador
 
 **Notas de Implementação:**
+
 - Hash anterior deve corresponder ao último log
 - Falha se hash anterior inválido (concurrency)
 - Eventos sem PII em plaintext
@@ -245,12 +264,14 @@ Implementação de store de deduplicação usando Redis com TTL e fail-closed.
 `src/pyloto_corp/infra/stores/dedupe_store.py`
 
 **Responsabilidades:**
+
 - Armazenar `dedupe_key` em Redis com TTL
 - Verificar se chave já foi processada
 - Implementar fail-closed (não processar se cache indisponível)
 - Registrar hit/miss de dedup
 
 **Interface:**
+
 ```python
 class RedisDedupeStore(DedupeStoreProtocol):
     async def is_processed(self, dedupe_key: str) -> bool:
@@ -267,6 +288,7 @@ class RedisDedupeStore(DedupeStoreProtocol):
 ```
 
 **Critério de Aceitação:**
+
 - Store implementado com Redis
 - TTL configurável (padrão: 3600 segundos)
 - Fail-closed em produção (erros = não processar)
@@ -274,6 +296,7 @@ class RedisDedupeStore(DedupeStoreProtocol):
 - Logs estruturados
 
 **Notas de Implementação:**
+
 - Dedupe_key: hash(message_id + timestamp)
 - TTL padrão: 1 hora (cobrir webhook retries)
 - Fail-closed: se Redis indisponível, erro 5xx
@@ -290,6 +313,7 @@ Refatorar factory function para usar backend configurável (Redis ou Firestore).
 `src/pyloto_corp/api/app.py`
 
 **Lógica:**
+
 ```python
 def create_dedupe_store(settings: Settings) -> DedupeStoreProtocol:
     if settings.dedupe_backend == "redis":
@@ -301,6 +325,7 @@ def create_dedupe_store(settings: Settings) -> DedupeStoreProtocol:
 ```
 
 **Critério de Aceitação:**
+
 - Factory implementado
 - Backend configurável via `Settings.dedupe_backend`
 - Testes de ambos backends
@@ -319,6 +344,7 @@ Nova classe para persistir informações de sessão com timeouts e multi-intents
 `src/pyloto_corp/application/session.py`
 
 **Responsabilidades:**
+
 - Salvar/recuperar sessão em Firestore
 - Rastrear última interação, lista de intents, status
 - Implementar timeouts (30 min de inatividade, 2h hard limit)
@@ -326,6 +352,7 @@ Nova classe para persistir informações de sessão com timeouts e multi-intents
 - Registrar encerramento de sessão
 
 **Interface:**
+
 ```python
 class SessionManager:
     async def get_or_create_session(
@@ -357,6 +384,7 @@ class SessionManager:
 ```
 
 **Critério de Aceitação:**
+
 - Store implementado com timeouts funcionando
 - Testes com Firestore emulador
 - Timeout de inatividade (30 min) implementado
@@ -364,6 +392,7 @@ class SessionManager:
 - Logs de encerramento por timeout
 
 **Notas de Implementação:**
+
 - Schema: `/sessions/{session_id}`
 - Timeout de inatividade: 30 minutos (Funcionamento.md)
 - Hard limit: 2 horas
@@ -381,6 +410,7 @@ Implementar pipeline completo que orquestra session, intenção, orchestrador, e
 `src/pyloto_corp/application/pipeline.py`
 
 **Responsabilidades:**
+
 - Recuperar sessão existente ou criar nova
 - Recuperar lista de intents e ativar próxima
 - Chamar `AIOrchestrator` com mensagem normalizada
@@ -389,6 +419,7 @@ Implementar pipeline completo que orquestra session, intenção, orchestrador, e
 - Registrar eventos de auditoria
 
 **Fluxo:**
+
 1. Receber webhook (inbound normalizado)
 2. `SessionManager.get_or_create_session(user_id)`
 3. `IntentQueue.add_intent(intent)`
@@ -400,6 +431,7 @@ Implementar pipeline completo que orquestra session, intenção, orchestrador, e
 9. `SessionManager.update_session(...)`
 
 **Critério de Aceitação:**
+
 - Pipeline implementado com fluxo completo
 - Testes com mocks de dependências
 - Auditoria registrada em cada passo
@@ -407,6 +439,7 @@ Implementar pipeline completo que orquestra session, intenção, orchestrador, e
 - Tratamento de erros em cascata
 
 **Notas de Implementação:**
+
 - Respeitar regra de 3 intents por sessão (Funcionamento.md)
 - Validar contexto antes de chamar IA
 - Tratar falhas do IA com fallback (regras determinísticas)
@@ -423,6 +456,7 @@ Integrar pipeline completo ao endpoint de webhook.
 `src/pyloto_corp/api/routes.py` (ou similar)
 
 **Endpoint:**
+
 ```python
 @app.post("/webhooks/whatsapp")
 async def process_whatsapp_webhook(
@@ -441,6 +475,7 @@ async def process_whatsapp_webhook(
 ```
 
 **Critério de Aceitação:**
+
 - Endpoint integrado com pipeline
 - Assinatura verificada (zero_trust_mode)
 - Deduplicação funcionando
@@ -448,6 +483,7 @@ async def process_whatsapp_webhook(
 - Retorna 200 imediatamente (não aguarda processamento)
 
 **Notas de Implementação:**
+
 - Usar Pub/Sub ou Cloud Tasks para async (opcional)
 - Retornar 200 OK imediatamente ao Meta
 - Processar em background job
@@ -466,18 +502,21 @@ Criar conjunto de prompts e knowledge base para classificação de intenção.
 `src/pyloto_corp/ai/prompts.py`
 
 **Prompts:**
+
 - `CLASSIFY_INTENT_SYSTEM` — System prompt para classificação
 - `CLASSIFY_INTENT_USER` — Template de user message
 - `EXTRACT_ENTITIES` — Prompt para extração de entidades
 - `GENERATE_RESPONSE` — Prompt para gerar resposta
 
 **Critério de Aceitação:**
+
 - Prompts criados em português
 - Documentação de contexto (intents, outcomes, fluxos)
 - Estrutura com variáveis (não hardcoded)
 - Versionamento de prompts (para A/B testing)
 
 **Notas de Implementação:**
+
 - Baseado em `Funcionamento.md` (vertentes, fluxos)
 - Incluir few-shots para main flows
 - Considerar temperature e stop_words
@@ -494,6 +533,7 @@ Classe que orquestra classificação via LLM com fallback a regras determinísti
 `src/pyloto_corp/ai/orchestrator.py`
 
 **Responsabilidades:**
+
 - Receber mensagem normalizada + contexto
 - Chamar LLM com prompt (local ou via API)
 - Parsear resposta em `AIResponse` (intent, outcome, reply_text)
@@ -501,6 +541,7 @@ Classe que orquestra classificação via LLM com fallback a regras determinísti
 - Registrar classificação para feedback futuro
 
 **Interface:**
+
 ```python
 class AIOrchestrator:
     async def classify(
@@ -513,6 +554,7 @@ class AIOrchestrator:
 ```
 
 **Critério de Aceitação:**
+
 - Classe implementada com LLM integration
 - Fallback a regras funcional
 - Testes com mensagens reais (dataset)
@@ -520,6 +562,7 @@ class AIOrchestrator:
 - Logs estruturados
 
 **Notas de Implementação:**
+
 - Usar OpenAI API ou modelo local (ex.: llama2)
 - Timeout: 5 segundos
 - Retry com backoff se falha
@@ -534,6 +577,7 @@ class AIOrchestrator:
 Mecanismo para qualificar leads conforme campos de `LeadProfile` (Funcionamento.md).
 
 **Critério de Aceitação:**
+
 - Score calculado baseado em critérios documentados
 - Qualificação (low, medium, high) atribuída
 - Testes com casos típicos

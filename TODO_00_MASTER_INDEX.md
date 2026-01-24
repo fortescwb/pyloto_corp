@@ -22,9 +22,11 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 ## 📁 Estrutura de TODO Lists
 
 ### 1️⃣ [TODO_01_INFRAESTRUTURA_E_SERVICOS.md](TODO_01_INFRAESTRUTURA_E_SERVICOS.md)
+
 **Objetivo:** Preparar infraestrutura em nuvem (GCP) e pipeline CI/CD
 
 **Seções:**
+
 - ✅ Configurar Ambiente de Nuvem
   - Projeto GCP
   - Firestore (collections: conversations, user_profiles, audit_logs)
@@ -49,9 +51,11 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 ---
 
 ### 2️⃣ [TODO_02_REFATORA_VALIDADORES_OUTBOUND.md](TODO_02_REFATORA_VALIDADORES_OUTBOUND.md)
+
 **Objetivo:** Refatorar validadores e implementar componentes de envio (outbound)
 
 **Seções:**
+
 - ✅ Refatorar Validadores
   - `limits.py` — Módulo centralizado de constantes
   - `TextMessageValidator` — Validação de texto
@@ -69,6 +73,7 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
   - Integração com deduplicação persistente
 
 **Dependências:**
+
 - TODO_01 (infraestrutura + secrets)
 
 **Duração Estimada:** 5-7 dias
@@ -76,9 +81,11 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 ---
 
 ### 3️⃣ [TODO_03_PERSISTENCIA_SESSAO_PIPELINE.md](TODO_03_PERSISTENCIA_SESSAO_PIPELINE.md)
+
 **Objetivo:** Implementar camada de persistência, sessão e pipeline de processamento
 
 **Seções:**
+
 - ✅ Refatorar Exportação
   - Extrair métodos de `execute()` em `ExportConversationUseCase`
   - Implementar `GcsHistoryExporter` com URLs assinadas
@@ -101,6 +108,7 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
   - Lead scoring (opcional)
 
 **Dependências:**
+
 - TODO_01 (infraestrutura)
 - TODO_02 (validadores)
 
@@ -109,9 +117,11 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 ---
 
 ### 4️⃣ [TODO_04_FLOWS_TESTES_OBSERVABILIDADE.md](TODO_04_FLOWS_TESTES_OBSERVABILIDADE.md)
+
 **Objetivo:** Implementar Flows, testes abrangentes e observabilidade
 
 **Seções:**
+
 - ✅ WhatsApp Flows e Templates
   - Endpoint `/flows/data` com validação de assinatura
   - Criptografia/decriptografia AES-GCM
@@ -136,6 +146,7 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
   - Conformidade LGPD/GDPR
 
 **Dependências:**
+
 - TODO_02 (validadores)
 - TODO_03 (stores + pipeline)
 
@@ -144,9 +155,11 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 ---
 
 ### 5️⃣ [TODO_05_DEPLOY_E_POS_DEPLOY.md](TODO_05_DEPLOY_E_POS_DEPLOY.md)
+
 **Objetivo:** Deploy em staging/produção e manutenção contínua
 
 **Seções:**
+
 - ✅ Deploy Inicial em Staging
   - Configuração de variáveis de ambiente
   - Deploy em Cloud Run
@@ -178,6 +191,7 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
   - Monitoramento de KPIs
 
 **Dependências:**
+
 - TODO_01 (infraestrutura)
 - TODO_02 (outbound)
 - TODO_03 (pipeline)
@@ -189,32 +203,38 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 
 ## 🎯 Cronograma Sugerido
 
-### Fase 1: Infraestrutura (Semana 1)
+### Fase 1: Infraestrutura
+
 - [ ] TODO_01 — Preparar infraestrutura e CI/CD
 - **Milestone:** Aplicação básica rodando em Cloud Run staging
 
-### Fase 2: Componentes Core (Semanas 2-3)
+### Fase 2: Componentes Core
+
 - [ ] TODO_02 — Refatorar validadores e outbound
 - [ ] TODO_03 (parcial) — Implementar stores base
 - **Milestone:** Pipeline básico funcional com persistência
 
-### Fase 3: Completar Pipeline (Semanas 3-4)
+### Fase 3: Completar Pipeline
+
 - [ ] TODO_03 (completo) — Sessão, pipeline e IA
 - [ ] TODO_04 (parcial) — Testes unitários
 - **Milestone:** Pipeline completo com fluxos operacionais
 
-### Fase 4: Qualidade e Observabilidade (Semanas 4-5)
+### Fase 4: Qualidade e Observabilidade
+
 - [ ] TODO_04 (completo) — Flows, testes de carga, observabilidade
 - **Milestone:** Sistema com observabilidade completa e testes validados
 
-### Fase 5: Deploy (Semanas 5-6)
+### Fase 5: Deploy
+
 - [ ] TODO_05 (parcial) — Deploy em staging, validação
 - [ ] Aprovações de segurança/compliance
 - [ ] Deploy em produção
 - [ ] Monitoramento inicial
 - **Milestone:** Em produção com operações estáveis
 
-### Fase 6: Manutenção (Ongoing)
+### Fase 6: Manutenção
+
 - [ ] TODO_05 (continuar) — Feedback loop, melhorias contínuas
 - **Milestone:** Sistema evoluindo conforme feedback
 
@@ -222,7 +242,7 @@ Todas as alterações em qualquer TODO list devem estar **alinhadas com**:
 
 ## 📊 Dependências e Paralelização
 
-```
+```Roadmap de tarefas
 TODO_01 (Infraestrutura)
     ↓
     ├─→ TODO_02 (Validadores + Outbound)
@@ -237,9 +257,9 @@ TODO_01 (Infraestrutura)
 ```
 
 **Oportunidades de Paralelização:**
-- TODO_02 e TODO_03 podem ser parcialmente paralelos (após TODO_01)
-- TODO_04 (testes) pode começar assim que TODO_03 tiver stores básicos
-- Documentação (README, guias) pode ser feita em paralelo com implementação
+  -TODO_02 e TODO_03 podem ser parcialmente paralelos (após TODO_01)
+  -TODO_04 (testes) pode começar assim que TODO_03 tiver stores básicos
+  -Documentação (README, guias) pode ser feita em paralelo com implementação
 
 ---
 
@@ -251,6 +271,7 @@ Antes de considerar uma tarefa **COMPLETA**, valide:
    - [ ] Atende especificações de `Funcionamento.md`
    - [ ] Segue padrões de `regras_e_padroes.md`
    - [ ] Sem conflitos com `README.md`
+   - [ ] Coerente com `Roadmap-producao.md`
 
 2. **Critérios de Aceitação:**
    - [ ] Todos os critérios listados no TODO foram cumpridos

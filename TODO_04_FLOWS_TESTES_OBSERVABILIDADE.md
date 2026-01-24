@@ -23,6 +23,7 @@ Implementar roteador dedicado que recebe eventos de Flow do WhatsApp e responde 
 `src/pyloto_corp/api/routes/flows.py`
 
 **Endpoint:**
+
 ```python
 @app.post("/flows/data")
 async def handle_flow_data(
@@ -47,6 +48,7 @@ async def health_check() -> JSONResponse:
 ```
 
 **Critério de Aceitação:**
+
 - Endpoint implementado e testado
 - Validação de assinatura funcional
 - Criptografia/decriptografia AES-GCM
@@ -54,6 +56,7 @@ async def health_check() -> JSONResponse:
 - Testes com payloads reais (Meta docs)
 
 **Notas de Implementação:**
+
 - Usar `cryptography.hazmat` para AES-GCM
 - Chaves armazenadas em Secret Manager
 - Logs sem expor dados sensíveis
@@ -71,12 +74,14 @@ Classe utilitária para operações criptográficas AES-GCM conforme Meta Flows 
 `src/pyloto_corp/adapters/whatsapp/flow_crypto.py`
 
 **Responsabilidades:**
+
 - Descriptografar payload recebido do Meta
 - Criptografar resposta para Meta
 - Validar IV e salt
 - Registrar logs estruturados (sem PII)
 
 **Interface:**
+
 ```python
 class FlowCrypto:
     async def decrypt(
@@ -106,12 +111,14 @@ class FlowCrypto:
 ```
 
 **Critério de Aceitação:**
+
 - Criptografia/decriptografia funcionando
 - Testes com vectors do Meta
 - Validação de assinatura funcionando
 - Logs estruturados
 
 **Notas de Implementação:**
+
 - Algoritmo: AES-256-GCM
 - Derivação de chave: PBKDF2 com salt
 - IV: 12 bytes (recomendado para GCM)
@@ -129,12 +136,14 @@ Classe que processa requisições de Flow e retorna dados (ex.: listar produtos,
 `src/pyloto_corp/application/flow_handler.py`
 
 **Responsabilidades:**
+
 - Processar tipos de screen (data, request, etc.)
 - Executar ações (fetch dados, atualizar, etc.)
 - Retornar resposta conforme Meta API
 - Tratar erros com mensagem amigável
 
 **Interface:**
+
 ```python
 class FlowDataHandler:
     async def handle_data_request(
@@ -148,12 +157,14 @@ class FlowDataHandler:
 ```
 
 **Critério de Aceitação:**
+
 - Handler implementado para main flows
 - Testes com flows reais (mocks)
 - Resposta conforme Meta API
 - Logs estruturados
 
 **Notas de Implementação:**
+
 - Suportar ENTRY, LIST, FORM screens
 - Retornar: `ACTION: "next"`, `NEXT_SCREEN`, `DATA`
 - Ou retornar: `ACTION: "complete"`, `DATA`
@@ -170,7 +181,8 @@ Store para armazenar metadados de templates sincronizados da Meta.
 `src/pyloto_corp/infra/stores/template_store.py`
 
 **Schema:**
-```
+
+```schema sugerido
 /templates/{template_id}
   ├── namespace: str
   ├── name: str
@@ -185,6 +197,7 @@ Store para armazenar metadados de templates sincronizados da Meta.
 ```
 
 **Critério de Aceitação:**
+
 - Store implementado com CRUD
 - Testes com Firestore emulador
 - Índices criados para busca rápida
@@ -197,6 +210,7 @@ Store para armazenar metadados de templates sincronizados da Meta.
 Completar `MediaUploader` para fazer upload via WhatsApp API após salvar em GCS.
 
 **Critério de Aceitação:**
+
 - Upload para GCS + WhatsApp API funcionando
 - media_id retornado e salvo em Firestore
 - Deduplicação por hash funcionando
@@ -215,12 +229,14 @@ Suite completa de testes para todos os validadores (criados em TODO_02).
 `tests/adapters/whatsapp/test_validators.py`
 
 **Casos de Teste:**
+
 - TextMessageValidator: limites, caracteres especiais, variáveis
 - MediaMessageValidator: tipos MIME, tamanhos
 - InteractiveMessageValidator: botões, listas, payloads
 - TemplateMessageValidator: templates válidas, parâmetros
 
 **Critério de Aceitação:**
+
 - Cobertura >90% de validadores
 - Todos os testes passando
 - Edge cases cobertos
@@ -237,6 +253,7 @@ Testes para ConversationStore, UserProfileStore, AuditLogStore, RedisDedupeStore
 `tests/infra/stores/test_*.py`
 
 **Casos de Teste:**
+
 - CRUD básico (create, read, update, delete)
 - Paginação com cursores
 - Timeouts (sessão)
@@ -244,6 +261,7 @@ Testes para ConversationStore, UserProfileStore, AuditLogStore, RedisDedupeStore
 - Dedup funcionando
 
 **Critério de Aceitação:**
+
 - Cobertura >85% de stores
 - Todos os testes passando
 - Usando Firestore emulador / Redis mock
@@ -260,6 +278,7 @@ Testes que cobrem fluxo completo: webhook → normalizador → pipeline → outb
 `tests/application/test_pipeline_integration.py`
 
 **Cenários:**
+
 1. Usuário novo → Classificação ENTRY_UNKNOWN → Resposta com vertentes
 2. Usuário escolhe vertente → Fluxo específico → Coleta dados
 3. Lead qualificado → Outcome HANDOFF_HUMAN → Resposta com resumo
@@ -267,6 +286,7 @@ Testes que cobrem fluxo completo: webhook → normalizador → pipeline → outb
 5. Erro interno → Outcome FAILED_INTERNAL → Resposta neutra
 
 **Critério de Aceitação:**
+
 - Cenários principais cobertos
 - Mocks de LLM, Firestore, Redis, WhatsApp API
 - Assertions em outcomes esperados
@@ -283,6 +303,7 @@ Testes de performance com lotes de 100 mensagens e múltiplas sessões paralelas
 `tests/load/test_load.py`
 
 **Cenários:**
+
 - 100 mensagens sequenciais
 - 50 sessões paralelas
 - Picos de 1000 msg/min
@@ -290,12 +311,14 @@ Testes de performance com lotes de 100 mensagens e múltiplas sessões paralelas
 - Validar throughput (>100 msg/s)
 
 **Critério de Aceitação:**
+
 - Testes rodando em ambiente simulado
 - Relatório de latência e throughput
 - Bottlenecks identificados
 - Documentado em `docs/performance.md`
 
 **Notas de Implementação:**
+
 - Usar `locust` ou `pytest-benchmark`
 - Testar em Cloud Run (ambiente de produção)
 - Monitorar CPU/memória
@@ -312,12 +335,14 @@ Validar que apenas webhooks assinados corretamente são processados.
 `tests/api/test_webhook_signature.py`
 
 **Casos:**
+
 - Assinatura válida → Processado
 - Assinatura inválida → 403 Forbidden
 - Sem assinatura → 403 Forbidden
 - zero_trust_mode desabilitado → Processado mesmo sem assinatura
 
 **Critério de Aceitação:**
+
 - Testes passando
 - Segurança validada
 - Logs de rejeição registrados
@@ -332,6 +357,7 @@ Validar que apenas webhooks assinados corretamente são processados.
 Expandir módulo `observability/logging.py` com logs em todos os componentes críticos.
 
 **Critério de Aceitação:**
+
 - Todos os componentes registram events estruturados
 - JSON format com `level`, `message`, `correlation_id`, `service`
 - Sem PII em logs (mascarar phone, email, etc.)
@@ -339,6 +365,7 @@ Expandir módulo `observability/logging.py` com logs em todos os componentes cr�
 - Sampling de verbose logs em produção
 
 **Notas de Implementação:**
+
 - Usar `pythonjsonlogger` ou similar
 - Context var para `correlation_id`
 - Structured logging em cada handler crítico
@@ -352,6 +379,7 @@ Expandir módulo `observability/logging.py` com logs em todos os componentes cr�
 Implementar métricas via Prometheus ou Cloud Monitoring.
 
 **Métricas:**
+
 - `whatsapp_message_processing_time_ms` — Latência por tipo
 - `whatsapp_api_call_duration_ms` — Latência de Graph API
 - `whatsapp_message_error_rate` — Taxa de erro por tipo
@@ -361,12 +389,14 @@ Implementar métricas via Prometheus ou Cloud Monitoring.
 - `handoff_human_count` — Total de handoffs
 
 **Critério de Aceitação:**
+
 - Métricas coletadas
 - Expostas em endpoint `/metrics` ou enviadas a backend
 - Dashboards criados
 - Alertas configurados
 
 **Notas de Implementação:**
+
 - Usar `prometheus-client` ou `opentelemetry`
 - Histogramas para latência (buckets: 100ms, 500ms, 1s, 5s, 10s)
 - Contadores para eventos
@@ -380,6 +410,7 @@ Implementar métricas via Prometheus ou Cloud Monitoring.
 Criar alertas para anomalias e dashboards para monitoramento.
 
 **Alertas:**
+
 - Taxa de erro > 1% → Aviso
 - Latência p95 > 5s → Aviso
 - Dedupe indisponível → Crítico
@@ -387,12 +418,14 @@ Criar alertas para anomalias e dashboards para monitoramento.
 - Tokens próximo de expiração → Lembrete
 
 **Dashboards:**
+
 - Overview: msgs processadas, latência, erro rate
 - Detalhado: por tipo de mensagem, vertente, outcome
 - Operacional: sessões ativas, handoffs, dedupe hits
 - Saúde: Redis, Firestore, Graph API
 
 **Critério de Aceitação:**
+
 - Alertas configurados no Cloud Monitoring
 - Notificações para Slack/email
 - Dashboards criados (Cloud Console ou Grafana)
@@ -405,6 +438,7 @@ Criar alertas para anomalias e dashboards para monitoramento.
 Adicionar middleware FastAPI que loga requisição/resposta (sem payload sensível).
 
 **Critério de Aceitação:**
+
 - Middleware implementado
 - Logs estruturados de req/resp
 - Sem exposição de PII
@@ -418,6 +452,7 @@ Adicionar middleware FastAPI que loga requisição/resposta (sem payload sensív
 Revisar políticas de CORS e implementar rate limiting.
 
 **Critério de Aceitação:**
+
 - CORS configurado (apenas domínios autorizados)
 - Rate limiting por IP/user
 - Endpoints internos protegidos
@@ -431,6 +466,7 @@ Revisar políticas de CORS e implementar rate limiting.
 Assegurar que payloads em repouso e em trânsito estejam criptografados.
 
 **Critério de Aceitação:**
+
 - HTTPS obrigatório (TLS 1.3+)
 - Payloads em Firestore criptografados (GCP-managed ou CMEK)
 - Flow data criptografado com AES-GCM
@@ -444,6 +480,7 @@ Assegurar que payloads em repouso e em trânsito estejam criptografados.
 Revisar fluxo completo para conformidade com regulações.
 
 **Checklist:**
+
 - Consentimento para coleta de dados
 - Direito ao esquecimento (delete em Firestore)
 - Dados mascarados em logs
@@ -452,6 +489,7 @@ Revisar fluxo completo para conformidade com regulações.
 - DPA com fornecedores (GCP, etc.)
 
 **Critério de Aceitação:**
+
 - Análise completa documentada
 - Falhas corrigidas
 - Aprovação de jurídico/compliance
