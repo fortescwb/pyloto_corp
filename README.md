@@ -1,85 +1,70 @@
 # pyloto_corp
 
-Atendimento inicial institucional/comercial da Pyloto via WhatsApp (API oficial da Meta). Este serviço **não é CRM** e **não executa operação final** — ele explica a Pyloto, identifica intenção, coleta dados mínimos, qualifica o lead e encerra com 1 outcome terminal canônico.
+## Apresentação do Projeto
 
-## Arquivos Fonte de Verdade
+O `pyloto_corp` é um serviço de atendimento automatizado responsável pelo **contato inicial institucional e comercial da Pyloto**, operando principalmente via **WhatsApp (API oficial do WhatsApp/META)**. Ele atua como **porta de entrada do ecossistema Pyloto**, identificando a intenção do cliente, apresentando as diferentes vertentes de solução da Pyloto e coletando informações iniciais de forma estruturada. Com base nesses dados, o sistema qualifica o lead e realiza o roteamento adequado do atendimento.
 
--`pyloto_corp/README.md`
--`pyloto_corp/regras_e_padroes.md`
--`pyloto_corp/Funcionamento.md`
--`pyloto_corp/Monitoramento_Regras-Padroes.md`
+Este serviço **não é um CRM nem executa operações finais** do negócio – ele **não finaliza vendas, não fecha contratos e não gerencia pedidos** diretamente. Seu papel é exclusivamente organizar o primeiro contato, cadastrando leads iniciais e entregando o contexto necessário para continuidade. **Toda sessão é finalizada com exatamente um _outcome_ terminal canônico**, representando o desfecho único daquela interação.
 
-## Status atual
+## Funcionalidades
 
-- Módulo WhatsApp cobre 16 tipos oficiais (incluindo templates, flows, CTA URL, location request) — ver [docs/whatsapp/README.md](docs/whatsapp/README.md)
-- **Infraestrutura TODO_01 implementada** — Settings, Secrets, Dedupe, HTTP Client
-- Auditoria técnica 2025: 84% conformidade, nenhum bloqueador — ver [docs/auditoria/README.md](docs/auditoria/README.md)
-- Produto e regras: fontes de verdade em [Funcionamento.md](Funcionamento.md) e [regras_e_padroes.md](regras_e_padroes.md)
-- **155 testes unitários passando** (cobertura em expansão)
+- **Identificação de intenção**
+- **Qualificação de lead**
+- **Roteamento automático**
+- **Coleta mínima de dados**
+- **Encerramento com _outcome_ canônico**
 
-## Princípios não-negociáveis
+## Tecnologias e Arquitetura
 
-- Batch-safe e idempotência por mensagem
-- Logs estruturados (JSON) e sem PII
-- Segredos fora do repositório (Secret Manager)
-- Cloud Run stateless e escalável
+- **Linguagem:** Python 3
+- **Framework:** FastAPI
+- **Mensageria:** WhatsApp Cloud API (Graph API v24.0)
+- **Armazenamento:** Firestore (GCP), Cloud Storage
+- **Dedupe:** Redis ou memória
+- **Deploy:** Google Cloud Run
+- **Observabilidade:** Logs estruturados com `correlation_id`, sem PII
+- **Arquitetura:** Camadas (api, domain, application, infra, adapters)
 
-## Estrutura (src layout)
+## Guia de Instalação Local
 
-- `src/pyloto_corp/api`: FastAPI, rotas e dependências
-- `src/pyloto_corp/domain`: entidades, enums e contratos
-- `src/pyloto_corp/application`: use-cases e pipeline
-- `src/pyloto_corp/infra`: clientes externos e dedupe
-- `src/pyloto_corp/adapters/whatsapp`: inbound/outbound e normalização
-- `src/pyloto_corp/ai`: orquestrador e prompts
-- `src/pyloto_corp/observability`: logging e correlation-id
-- `docs/`: conhecimento e contratos
-- `deploy/`: Cloud Run
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+cp .env.exemplo .env
+uvicorn pyloto_corp.api.app:app --reload --port 8080
+```
 
-## Documentação
+## Configurações Importantes
 
-- Produto: [Funcionamento.md](Funcionamento.md)
-- Regras de código: [regras_e_padroes.md](regras_e_padroes.md)
-- **Schema Firestore**: [docs/firestore/schema.md](docs/firestore/schema.md)
-- **Migração Graph API**: [docs/api-migration.md](docs/api-migration.md)
-- Auditoria: [docs/auditoria/README.md](docs/auditoria/README.md)
-- Módulo WhatsApp: [docs/whatsapp/README.md](docs/whatsapp/README.md)
-- Referências Meta/WhatsApp: [docs/reference/meta/README.md](docs/reference/meta/README.md)
+- `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WEBHOOK_SECRET`
+- `FIRESTORE_PROJECT_ID`, `GCS_BUCKET_MEDIA`, `GCS_BUCKET_EXPORT`
+- `DEDUPE_BACKEND`, `REDIS_URL`
+- `ZERO_TRUST_MODE`, `PEPPER_SECRET`
 
-## Rodar local
+## Padrões de Código e Qualidade
 
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -e .[dev]
-    uvicorn pyloto_corp.api.app:app --reload --port 8080
+[regras_e_padroes.md]
 
-## Variáveis principais
+- Máximo 200 linhas por arquivo, 50 por função
+- Separação estrita de camadas
+- Nenhum vazamento de PII
+- Zero-trust em todo input externo
+- Cobertura mínima de testes: 90%
+- Linters e testes em CI obrigatórios (`ruff`, `pytest`, `coverage`)
 
-Configuração completa em [.env.exemplo](.env.exemplo). Principais:
+## Monitoramento e Auditoria
 
-**WhatsApp/Meta API:**
+- Arquivo `Monitoramento_Regras-Padroes.md` mantém rastreio de violações
+- Auditoria técnica 2026: 84% conformidade, 0 violações críticas
+- 155 testes automatizados passando
 
-- `WHATSAPP_VERIFY_TOKEN` — Token de verificação do webhook
-- `WHATSAPP_WEBHOOK_SECRET` — HMAC SHA-256 para validação
-- `WHATSAPP_ACCESS_TOKEN` — Bearer token (usar Secret Manager em prod)
-- `WHATSAPP_PHONE_NUMBER_ID` — ID do número registrado
+## Documentação Complementar
 
-**Infraestrutura:**
+- `Funcionamento.md`: visão de produto e fluxos
+- `regras_e_padroes.md`: estilo, arquitetura, segurança
+- `docs/whatsapp/`, `docs/auditoria/`, `docs/firestore/`
 
-- `ENVIRONMENT` — development | staging | production
-- `DEDUPE_BACKEND` — memory | redis
-- `REDIS_URL` — URL de conexão Redis (se dedupe_backend=redis)
-- `FIRESTORE_PROJECT_ID` — ID do projeto GCP
-- `GCS_BUCKET_MEDIA` — Bucket para mídia WhatsApp
-- `GCS_BUCKET_EXPORT` — Bucket para exportações
+## Licença e Contribuição
 
-**Segurança:**
-
-- `ZERO_TRUST_MODE` — Validar assinatura sempre (default: true)
-- `PEPPER_SECRET` — Para derivar user_key via HMAC
-
-## Endpoints mínimos
-
-- `GET /health`
-- `GET /webhooks/whatsapp` (verificação Meta)
-- `POST /webhooks/whatsapp` (inbound)
+Projeto **privado e proprietário**. Contribuições externas não são aceitas. Código mantido por equipe interna sob políticas de confidencialidade da Pyloto.
