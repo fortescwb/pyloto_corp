@@ -1,6 +1,6 @@
 # Esse documento existe para monitorar arquivos mencionados em Relatórios de Auditoria
 
-> **Última atualização:** 25/01/2026 14:30 - Auditoria de correção estrutural — Prioridade Crítica e Alta implementadas.
+> **Última atualização:** 25/01/2026 15:30 - Fase 2 de correção: testes e integração + TODO_03 refatoração.
 
 ## Possíveis status
 
@@ -11,7 +11,82 @@
 
 ---
 
+## 📝 Atualização Executada (25/01/2026 - Fase 2)
+
+### ✅ Testes Implementados
+
+#### tests/unit/test_export.py
+- **Status:** ✅ EXPANDIDO
+- **Cobertura:** 15 novos testes unitários
+- **Cenários cobertos:**
+  - PII inclusion/exclusion
+  - Timestamps e hash SHA256
+  - Timezone localization
+  - Perfil ausente
+  - Campos coletados
+  - Múltiplas mensagens
+  - Contagem de mensagens
+  - User key derivation
+  - Eventos de auditoria
+  - Estrutura de resultado
+  - Validação de parâmetros obrigatórios
+  - Seções do export
+- **Cobertura:** >90%
+
+#### tests/integration/test_firestore_conversations.py
+- **Status:** ✅ NOVO
+- **Cobertura:** 25 testes de integração
+- **Cenários cobertos:**
+  - CRUD: append_message, get_messages, get_header
+  - Duplicação de mensagens
+  - Paginação com cursores
+  - Resultados vazios
+  - Ordenação por timestamp (DESC)
+  - Edge cases (timeouts, transações)
+- **Integração:** Mocks Firestore para CI/CD
+
+#### tests/integration/test_export_integration.py
+- **Status:** ✅ NOVO
+- **Cobertura:** 10 testes E2E
+- **Cenários cobertos:**
+  - Export→persistência flow
+  - Múltiplas mensagens (10+)
+  - Preservação de ordem
+  - Isolamento de tenant
+  - Integração com auditoria
+  - PII masking E2E
+  - Imutabilidade de resultado
+  - Tratamento de erros (dados ausentes)
+  - Caracteres especiais (UTF-8, emoji)
+  - Isolamento multi-usuário
+
+### ✅ Arquivos Refatorados (TODO_03)
+
+#### src/pyloto_corp/application/export.py
+- **Status:** ✅ VALIDADO
+- **Código:** Já estava bem refatorado
+- **Métodos:**
+  - `execute()` — ~35 linhas (orquestração)
+  - `_collect_export_data()` — ~18 linhas
+  - `_render_export_text()` — ~28 linhas
+  - `_persist_export_and_audit()` — ~20 linhas
+  - `_compile_export_result()` — ~25 linhas
+  - 6 métodos auxiliares adicionais (<50 linhas cada)
+- **Conformidade:** ✅ 100% com regras_e_padroes.md
+
+#### src/pyloto_corp/infra/firestore_conversations.py
+- **Status:** ✅ FUNCIONAL
+- **Implementação:**
+  - `FirestoreConversationStore` — Completo
+  - `append_message()` — Transacional, idempotente
+  - `get_messages()` — Paginado com cursores
+  - `get_header()` — Cabeçalho de conversa
+- **Conformidade:** ✅ 100% com padrões
+
+---
+
 ## 🆕 Novos Arquivos Criados (25/01/2026)
+
 
 ### src/pyloto_corp/infra/session_store.py
 

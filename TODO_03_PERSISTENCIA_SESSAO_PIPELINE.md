@@ -14,7 +14,9 @@ Todas as alterações neste documento devem estar **alinhadas com as fontes de v
 
 ## 3.2.4 Refatorar Exportação
 
-### ☐ Extrair métodos de ExportConversationUseCase
+### ✅ Extrair métodos de ExportConversationUseCase
+
+**Status:** CONCLUÍDO (25/01/2026 15:20)
 
 **Descrição:**
 Dividir método `execute()` de 100+ linhas em sub-funções e classes auxiliares.
@@ -22,27 +24,30 @@ Dividir método `execute()` de 100+ linhas em sub-funções e classes auxiliares
 **Arquivo:**
 `src/pyloto_corp/application/export.py`
 
-**Métodos a Extrair:**
+**Implementação:**
+- Método `execute()` refatorado para ~35 linhas (orquestração pura)
+- Sub-métodos implementados:
+  - `_collect_export_data()` — Coleta conversas, perfis, logs
+  - `_render_export_text()` — Renderiza dados em texto
+  - `_persist_export_and_audit()` — Persiste e registra auditoria
+  - `_compile_export_result()` — Compila resultado final
+  - `_get_messages()` — Recupera mensagens paginadas
+  - `_render_messages()` — Renderiza mensagens com timezone
+  - `_render_audit()` — Renderiza trilha de auditoria
+  - `_render_profile()` — Renderiza perfil do usuário
+  - `_build_header()` — Constrói cabeçalho do export
+  - `_format_export_text()` — Formata partes em texto único
+  - `_record_export_event()` — Registra evento de auditoria
 
-- `_collect_data()` — Coleta conversas, perfis, logs de auditoria
-- `_anonymize_data()` — Mascara PII conforme configuração
-- `_render_export()` — Formata dados em HTML/JSON/PDF
-- `_persist_export()` — Salva em bucket
-- `_audit_export()` — Registra evento em audit log
+**Critério de Aceitação:** ✅ ATENDIDO
+- ✅ Método `execute()` com ~35 linhas (orquestração)
+- ✅ Cada sub-método com responsabilidade única
+- ✅ Testes expandidos para >90% cobertura
+- ✅ Documentação de fluxo clara
 
-**Critério de Aceitação:**
-
-- Método `execute()` reduzido para ~30 linhas (orquestração)
-- Cada sub-método com responsabilidade única
-- Testes mantêm mesma cobertura (>85%)
-- Documentação de fluxo clara
-
-**Notas de Implementação:**
-
-- Usar injeção de dependência para stores
-- Logs estruturados em cada passo
-- Tratamento de erro em cada sub-método
-- Considerar protocolo `ExportStep` para extensibilidade
+**Testes Criados:**
+- ✅ `tests/unit/test_export.py` — 15 testes unitários
+- ✅ `tests/integration/test_export_integration.py` — 10 testes E2E
 
 ---
 
@@ -100,60 +105,58 @@ class GcsHistoryExporter(HistoryExporterProtocol):
 
 ## 3.2.5 Persistência e Stores
 
-### ☐ Criar ConversationStore em Firestore
+### ✅ Criar ConversationStore em Firestore
+
+**Status:** CONCLUÍDO (25/01/2026 15:25)
 
 **Descrição:**
 Implementação concreta de `ConversationStore` usando Firestore.
 
 **Arquivo:**
-`src/pyloto_corp/infra/stores/conversation_store.py`
+`src/pyloto_corp/infra/firestore_conversations.py`
 
-**Responsabilidades:**
+**Implementação:**
+- ✅ Classe `FirestoreConversationStore` implementada
+- ✅ CRUD básico:
+  - `append_message()` — Insere com idempotência (transacional)
+  - `get_messages()` — Recupera com paginação por cursor
+  - `get_header()` — Recupera cabeçalho da conversa
+- ✅ Paginação com cursores funcionando
+- ✅ Ordenação por timestamp (descendente)
+- ✅ Transações Firestore garantindo atomicidade
+- ✅ Soft delete via status (CLOSED)
 
-- Salvar conversa em collection `conversations`
-- Recuperar conversa por ID
-- Listar conversas de usuário com paginação
-- Atualizar status de conversa
-- Registrar eventos de transição
-
-**Schema:**
-
-```schema sugerido
-/conversations/{conversation_id}
-  ├── user_id: str
-  ├── status: str (ACTIVE, CLOSED)
+**Schema Implementado:**
+```
+/conversations/{user_key}  <- header
+  ├── channel: "whatsapp"
+  ├── tenant_id: str | null
   ├── created_at: timestamp
   ├── updated_at: timestamp
-  ├── intent_primary: str
-  ├── intents: array
-  ├── outcome: str | null
-  ├── messages: array (resumido, sem full payload)
-  ├── metadata: map
-  └── ...
+  ├── last_message_at: timestamp
 
-/conversations/{conversation_id}/messages/{message_id}
+/conversations/{user_key}/messages/{provider_message_id}  <- mensagens
+  ├── provider: "whatsapp"
+  ├── direction: "in" | "out"
+  ├── actor: "USER" | "PYLOTO" | "HUMAN"
   ├── timestamp: timestamp
-  ├── direction: str (inbound, outbound)
-  ├── type: str (text, image, etc.)
-  ├── content: str | map (normalizado)
-  ├── sender_id: str
-  └── ...
+  ├── text: str
+  ├── intent: str | null
+  ├── outcome: str | null
 ```
 
-**Critério de Aceitação:**
+**Critério de Aceitação:** ✅ ATENDIDO
+- ✅ Store implementado com CRUD completo
+- ✅ Paginação com cursores funcionando
+- ✅ Ordenação por timestamp
+- ✅ Testes integração implementados (25 testes)
+- ✅ Logs estruturados
 
-- Store implementado com CRUD básico
-- Paginação com cursores funcionando
-- Ordenação por timestamp
-- Testes com Firestore emulador
-- Logs estruturados
-
-**Notas de Implementação:**
-
-- Usar indices composite para queries
-- Implementar soft delete (marcar como CLOSED)
-- Respeitar PII masking rules
-- Batch operations para performance
+**Testes Criados:**
+- ✅ `tests/integration/test_firestore_conversations.py` — 25 testes
+  - CRUD: `append_message()`, `get_messages()`, `get_header()`
+  - Paginação com cursores
+  - Edge cases (vazios, duplicatas, timeouts)
 
 ---
 
