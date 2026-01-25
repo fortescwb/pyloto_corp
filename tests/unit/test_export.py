@@ -9,7 +9,7 @@ import pytest
 
 from pyloto_corp.domain.conversations import ConversationMessage
 from pyloto_corp.domain.profile import UserProfile
-from tests.unit.test_export_helpers import (
+from .test_export_helpers import (
     create_export_use_case,
     make_event,
 )

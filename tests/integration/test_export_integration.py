@@ -13,7 +13,7 @@ from pyloto_corp.domain.profile import UserProfile
 from pyloto_corp.infra.firestore_conversations import (
     FirestoreConversationStore,
 )
-from tests.unit.test_export_helpers import (
+from ..unit.test_export_helpers import (
     FakeAuditStore,
     FakeExporter,
     FakeProfileStore,

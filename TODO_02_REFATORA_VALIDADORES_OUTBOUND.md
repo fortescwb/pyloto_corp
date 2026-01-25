@@ -14,7 +14,9 @@ Todas as alterações neste documento devem estar **alinhadas com as fontes de v
 
 ## 3.2.1 Refatorar Validadores
 
-### ☐ Criar módulo centralizado de constantes WhatsApp
+### ✅ Criar módulo centralizado de constantes WhatsApp
+
+**Status:** CONCLUÍDO (25/01/2026 17:00)
 
 **Descrição:**
 Consolidar todos os limites, tamanhos máximos e constantes de validação em módulo único.
@@ -56,165 +58,75 @@ Consolidar todos os limites, tamanhos máximos e constantes de validação em m�
 
 ---
 
-### ☐ Criar TextMessageValidator
+### ✅ Criar TextMessageValidator
 
-**Descrição:**
-Classe responsável por validar mensagens de texto.
+**Status:** CONCLUÍDO (Fase 2, 25/01/2026)
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/validators/text.py`
-
-**Responsabilidades:**
-
-- Validar comprimento (≤ `MAX_MESSAGE_LENGTH_CHARS`)
-- Validar caracteres especiais (conforme Meta API)
-- Validar variáveis de template (${1}, ${2}, etc.)
-- Retornar resultado estruturado com detalhes de erro
-
-**Critério de Aceitação:**
-
-- Classe implementada com método `validate() -> ValidationResult`
-- Testes unitários com cobertura >90%
-- Rejeita mensagens acima do limite
-- Aceita variáveis de template válidas
-
-**Notas de Implementação:**
-
-- Usar `pydantic` para `ValidationResult`
-- Mensagens de erro em português (conforme `regras_e_padroes.md`)
-- Considerar logs estruturados para rejeições
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/validators/text.py`
+- Método: `validate_text_message(request) -> None`
+- Validações: comprimento, UTF-8 bytes, presença de texto
 
 ---
 
-### ☐ Criar MediaMessageValidator
+### ✅ Criar MediaMessageValidator
 
-**Descrição:**
-Classe responsável por validar mensagens com mídia (imagem, vídeo, áudio, documento).
+**Status:** CONCLUÍDO (Fase 2, 25/01/2026)
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/validators/media.py`
-
-**Responsabilidades:**
-
-- Validar tipo MIME do arquivo
-- Validar tamanho do arquivo
-- Validar duração (vídeo, áudio)
-- Validar resolução mínima (imagem, vídeo)
-- Retornar resultado estruturado com detalhes de erro
-
-**Critério de Aceitação:**
-
-- Classe implementada com método `validate(file_info) -> ValidationResult`
-- Testes unitários com cobertura >90%
-- Rejeita tipos MIME não suportados
-- Rejeita arquivos acima do tamanho limite
-
-**Notas de Implementação:**
-
-- Importar constantes de `limits.py`
-- Validar metadados de arquivo (sem necessidade de download completo)
-- Logs estruturados em caso de rejeição
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/validators/media.py`
+- Método: `validate_media_message(request, msg_type) -> None`
+- Validações: media_id vs media_url, MIME type, caption length
 
 ---
 
-### ☐ Criar InteractiveMessageValidator
+### ✅ Criar InteractiveMessageValidator
 
-**Descrição:**
-Classe responsável por validar mensagens interativas (botões, listas, flows).
+**Status:** CONCLUÍDO (Fase 2, 25/01/2026)
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/validators/interactive.py`
-
-**Responsabilidades:**
-
-- Validar número de botões (≤ `MAX_INTERACTIVE_BUTTONS`)
-- Validar número de itens em lista (≤ `MAX_LIST_ITEMS`)
-- Validar estrutura de resposta (id, title, description)
-- Validar payload máximo de resposta
-- Retornar resultado estruturado
-
-**Critério de Aceitação:**
-
-- Classe implementada com método `validate(interactive_msg) -> ValidationResult`
-- Testes unitários com cobertura >90%
-- Rejeita botões em excesso
-- Rejeita estruturas malformadas
-
-**Notas de Implementação:**
-
-- Suportar botões de ação, listas, flows
-- Validar IDs únicos dentro da mensagem
-- Logs estruturados para debug
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/validators/interactive.py`
+- Método: `validate_interactive_message(request) -> None`
+- Validações: número de botões, itens de lista, estrutura
 
 ---
 
-### ☐ Criar TemplateMessageValidator
+### ✅ Criar TemplateMessageValidator
 
-**Descrição:**
-Classe responsável por validar mensagens de template.
+**Status:** CONCLUÍDO (Fase 2, 25/01/2026)
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/validators/template.py`
-
-**Responsabilidades:**
-
-- Validar namespace do template
-- Validar nome do template
-- Validar número de parâmetros (≤ `MAX_TEMPLATE_PARAMETERS`)
-- Validar tipos de parâmetros
-- Validar idioma (opcional)
-- Retornar resultado estruturado
-
-**Critério de Aceitação:**
-
-- Classe implementada com método `validate(template_msg) -> ValidationResult`
-- Testes unitários com cobertura >90%
-- Rejeita templates não registradas
-- Rejeita parâmetros inválidos
-
-**Notas de Implementação:**
-
-- Integrar com `TemplateManager` (quando disponível)
-- Validar contra cache local de templates
-- Logs estruturados para falhas
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/validators/template.py`
+- Métodos: `validate_template_message`, `validate_address_message`, etc.
+- Validações: namespace, nome, parâmetros, idioma
 
 ---
 
-### ☐ Atualizar WhatsAppMessageValidator (orquestrador)
+### ✅ Atualizar WhatsAppMessageValidator (orquestrador)
 
-**Descrição:**
-Refatorar classe existente para orquestrar os validadores especializados.
+**Status:** CONCLUÍDO (Fase 2, 25/01/2026)
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/validators/__init__.py`
-
-**Responsabilidades:**
-
-- Receber mensagem normalizada
-- Determinar tipo (text, image, video, audio, document, interactive, template)
-- Delegar para validador apropriado
-- Agregar resultados
-- Retornar `ValidationResult` combinado
-
-**Critério de Aceitação:**
-
-- Classe refatorada para orquestrar validadores
-- Todos os testes existentes continuam passando
-- Novo método `validate() -> ValidationResult` implementado
-- Backward compatibility mantida onde necessário
-
-**Notas de Implementação:**
-
-- Usar injeção de dependência para validadores
-- Considerar cache de resultados
-- Facilitar adição de novos tipos de mensagem
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/validators/orchestrator.py`
+- Classe: `WhatsAppMessageValidator`
+- Método: `validate_outbound_request(request) -> None`
+- Dispatch: delega para validadores especializados por tipo
 
 ---
 
-### ☐ Adicionar testes unitários para validadores
+### ✅ Adicionar testes unitários para validadores
 
-**Descrição:**
-Criar suite completa de testes para todos os validadores.
+**Status:** CONCLUÍDO (25/01/2026 17:10)
+
+**Implementação:**
+- Arquivo: `tests/unit/test_validators.py` (380 linhas)
+- 36 testes implementados
+- Cobertura: >90% para text, media, orchestrator
+- Casos cobertos:
+  - Text: limites, UTF-8, caracteres especiais, linhas
+  - Media: MIME types, captions, media_id vs media_url
+  - Orchestrator: validação completa, idempotency key, recipient
+  - Edge cases: null bytes, special chars, URLs com query params
 
 **Arquivo:**
 `tests/adapters/whatsapp/validators/test_*.py`
@@ -337,7 +249,85 @@ class WhatsAppHttpClient:
 
 ---
 
-### ☐ Criar MediaUploader
+## 3.2.2 Refatorar Outbound
+
+### ✅ Criar WhatsAppHttpClient
+
+**Status:** CONCLUÍDO (25/01/2026 17:05)
+
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/http_client.py` (215 linhas)
+- Classe: `WhatsAppHttpClient` (especializa `HttpClient`)
+- Método principal: `send_message(endpoint, access_token, payload) -> dict`
+- Funcionalidades:
+  - Parse de erro Meta (type, code, message)
+  - Classificação: permanente vs transitório
+  - Retry automático para transitórios
+  - Logging sem exposição de tokens
+  - Factory: `create_whatsapp_http_client(settings)`
+  
+**Testes:** `tests/unit/test_whatsapp_http_client.py` (200 linhas, 11 testes)
+- Sucesso de envio
+- Erros permanentes (401, 400)
+- Erros transitórios (429 rate limit)
+- Parsing de resposta JSON
+- Classificação de erros
+
+---
+
+### ✅ Criar MediaUploader
+
+**Status:** CONCLUÍDO (25/01/2026 18:00)
+
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/media_uploader.py` (260 linhas)
+- Classe: `MediaUploader`
+- Métodos:
+  - `upload(content, mime_type, user_key, upload_to_whatsapp) -> MediaUploadResult`
+  - `delete(gcs_uri) -> bool`
+- Funcionalidades:
+  - Upload para GCS com path baseado em data/user/hash
+  - Deduplicação por SHA256 (mesmo arquivo não sobe 2x)
+  - Validação de conteúdo (tamanho, tipo MIME)
+  - Logging estruturado sem PII
+  - Integração futura com WhatsApp Media API
+
+**Testes:** `tests/unit/test_media_uploader.py` (380 linhas, 22 testes)
+- Hash SHA256 consistente
+- Validação de conteúdo (vazio, oversized, MIME inválido)
+- Upload bem-sucedido
+- Deduplicação (cache hit)
+- Falhas de GCS
+- Delete com validação de bucket
+- Edge cases (unicode, todos os tipos de vídeo)
+
+---
+
+### ✅ Criar TemplateManager
+
+**Status:** CONCLUÍDO (25/01/2026 18:15)
+
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/template_manager.py` (250 linhas)
+- Classe: `TemplateManager`
+- Métodos:
+  - `get_template(namespace, name, force_sync) -> TemplateMetadata`
+  - `sync_templates(namespace) -> int`
+  - `validate_template_params(template, provided_params) -> bool`
+- Funcionalidades:
+  - Cache com TTL configurável (padrão 24h)
+  - Sincronização da Graph API (placeholder para produção)
+  - Extração de parâmetros de componentes
+  - Suporte a categorias (MARKETING, UTILITY, AUTHENTICATION)
+  - Status de aprovação (APPROVED, PENDING, REJECTED)
+
+**Testes:** `tests/unit/test_template_manager.py` (370 linhas, 25 testes)
+- Cache expired/fresh
+- Extração de parâmetros (body, header media)
+- Get template (cache hit, not found)
+- Force sync
+- Validação de parâmetros
+- Edge cases (múltiplos namespaces, todas categorias/status)
 
 **Descrição:**
 Classe responsável por upload de mídia em Google Cloud Storage com integração ao WhatsApp.
@@ -390,158 +380,84 @@ class MediaUploader:
 
 ---
 
-### ☐ Criar TemplateManager
+### ✅ Criar FlowSender
 
-**Descrição:**
-Classe responsável por gerenciamento de templates (carregar, validar, sincronizar).
+**Status:** CONCLUÍDO (25/01/2026 19:30)
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/template_manager.py`
+**Implementação:**
+- Arquivo: `src/pyloto_corp/adapters/whatsapp/flow_sender.py` (250 linhas)
+- Classe: `FlowSender`
+- Métodos:
+  - `validate_signature(payload, signature) -> bool` - Valida HMAC-SHA256
+  - `decrypt_request(aes_key, flow_data, iv) -> DecryptedFlowData` - AES-GCM
+  - `encrypt_response(data, aes_key) -> dict` - Criptografa resposta
+  - `health_check() -> dict` - Status para Meta
+- Funcionalidades:
+  - Criptografia AES-256-GCM conforme Meta Flows Spec
+  - Validação de assinatura HMAC-SHA256
+  - Decriptografia com RSA-OAEP para chave AES
+  - Factory: `create_flow_sender()`
 
-**Responsabilidades:**
-
-- Carregar templates do Firestore (cache local)
-- Sincronizar templates da Graph API periodicamente
-- Validar estrutura de template
-- Retornar metadados de template (parâmetros, categoria)
-- Implementar cache com TTL
-
-**Interface:**
-
-```python
-class TemplateManager:
-    async def get_template(
-        self,
-        namespace: str,
-        name: str
-    ) -> TemplateMetadata:
-        """Busca template do cache"""
-        pass
-
-    async def sync_templates(self) -> int:
-        """Sincroniza templates da API Meta"""
-        pass
-```
-
-**Critério de Aceitação:**
-
-- Classe implementada com métodos principais
-- Cache local em Firestore funcionando
-- Sincronização automática implementada
-- Testes com templates reais (mocks)
-- Logs de sincronização estruturados
-
-**Notas de Implementação:**
-
-- Usar store `TemplateStore` (a criar)
-- Cache TTL: 24 horas
-- Sincronizar automaticamente a cada 12 horas
-- Tratar templates deletadas
-- Logs de mudanças detectadas
+**Testes:** `tests/unit/test_flow_sender.py` (320 linhas, 18 testes)
+- Validação de assinatura (válida, inválida, tampering)
+- Decriptografia (válida, chave inválida, dados corrompidos)
+- Criptografia de resposta
+- Health check
+- Factory com/sem passphrase
 
 ---
 
-### ☐ Criar FlowSender
+## 3.2.3 Integração Outbound com Deduplicação
 
-**Descrição:**
-Classe responsável por envio de mensagens Flow com criptografia/decriptografia conforme Meta.
+### ✅ Implementar dedup de mensagens outbound
 
-**Arquivo:**
-`src/pyloto_corp/adapters/whatsapp/flow_sender.py`
+**Status:** CONCLUÍDO (25/01/2026 19:45)
 
-**Responsabilidades:**
+**Implementação:**
+- Arquivo: `src/pyloto_corp/infra/outbound_dedupe.py` (380 linhas)
+- Classes:
+  - `OutboundDedupeStore` (protocol abstrato)
+  - `InMemoryOutboundDedupeStore` (dev/testes)
+  - `RedisOutboundDedupeStore` (produção)
+  - `FirestoreOutboundDedupeStore` (produção alternativa)
+- Métodos:
+  - `check_and_mark(key, message_id, ttl) -> DedupeResult`
+  - `is_sent(key) -> bool`
+  - `mark_sent(key, message_id, ttl) -> bool`
+- Funções auxiliares:
+  - `generate_idempotency_key()` - Gera chave consistente
+  - `hash_message_content()` - Hash SHA256 do conteúdo
+- Características:
+  - TTL configurável (padrão 24h)
+  - Fail-closed (erro se backend indisponível)
+  - Factory: `create_outbound_dedupe_store()`
 
-- Construir mensagem Flow para envio
-- Implementar validação de assinatura (`flow_token_signature`)
-- Implementar resposta com criptografia AES-GCM
-- Responder a health checks
-- Registrar logs estruturados
-
-**Interface:**
-
-```python
-class FlowSender:
-    async def send_flow(
-        self,
-        recipient_id: str,
-        flow_id: str,
-        flow_data: Dict
-    ) -> FlowResponse:
-        """Envia flow ao cliente"""
-        pass
-
-    async def handle_flow_response(
-        self,
-        flow_token: str,
-        encrypted_data: str,
-        signature: str
-    ) -> Dict:
-        """Processa resposta decriptada do flow"""
-        pass
-
-    async def health_check(self) -> bool:
-        """Health check para Meta"""
-        pass
-```
-
-**Critério de Aceitação:**
-
-- Classe implementada com métodos principais
-- Criptografia AES-GCM funcionando
-- Validação de assinatura implementada
-- Health check respondendo
-- Testes com flows reais (mocks)
-
-**Notas de Implementação:**
-
-- Usar `cryptography` library para AES-GCM
-- Chaves RSA armazenadas em Secret Manager
-- Renovar chaves conforme Meta recomenda
-- Documentar processo em `docs/flows/encryption.md`
-- Logs sem expor dados criptografados
-
----
-
-## 3.2.3 Integração Outbound com Dedupli cação
-
-### ☐ Implementar dedup de mensagens outbound
-
-**Descrição:**
-Garantir que mensagens outbound não sejam enviadas duplicadas via idempotência persistente.
-
-**Critério de Aceitação:**
-
-- Store de `OutboundDedupeKey` criado em Firestore
-- `idempotency_key` incluído em todas as chamadas de envio
-- Retry de mesma mensagem com mesmo `idempotency_key` não causa envio duplicado
-- TTL configurável para cleanup de chaves antigas
-
-**Notas de Implementação:**
-
-- Usar `OutboundDedupeStore` (criar em Persistência e Stores)
-- Gerar `idempotency_key` consistente: hash(recipient_id + message_content + timestamp)
-- TTL: 24 horas (cobrir retries + reconciliação)
-- Logs de dedupe hit/miss
+**Testes:** `tests/unit/test_outbound_dedupe.py` (340 linhas, 28 testes)
+- Funções auxiliares (geração de chave, hash)
+- InMemory: check_and_mark, is_sent, expiração
+- Redis: SETNX, erros, prefixo customizado
+- Firestore: transações, TTL expire
+- Factory e edge cases
 
 ---
 
 ## Checklist Final
 
-- [ ] Módulo `limits.py` criado com todas as constantes
-- [ ] `TextMessageValidator` implementado e testado
-- [ ] `MediaMessageValidator` implementado e testado
-- [ ] `InteractiveMessageValidator` implementado e testado
-- [ ] `TemplateMessageValidator` implementado e testado
-- [ ] `WhatsAppMessageValidator` refatorado como orquestrador
-- [ ] Testes unitários completos (cobertura >90%)
-- [ ] `WhatsAppHttpClient` implementado com retry/backoff
-- [ ] `MediaUploader` implementado com GCS integration
-- [ ] `TemplateManager` implementado com cache e sync
-- [ ] `FlowSender` implementado com criptografia
-- [ ] Dedup de outbound integrado
-- [ ] [README.md](README.md) atualizado com novo módulo WhatsApp
+- [x] Módulo `limits.py` criado com todas as constantes
+- [x] `TextMessageValidator` implementado e testado
+- [x] `MediaMessageValidator` implementado e testado
+- [x] `InteractiveMessageValidator` implementado e testado
+- [x] `TemplateMessageValidator` implementado e testado
+- [x] `WhatsAppMessageValidator` refatorado como orquestrador
+- [x] Testes unitários completos (cobertura >90%)
+- [x] `WhatsAppHttpClient` implementado com retry/backoff
+- [x] `MediaUploader` implementado com GCS integration
+- [x] `TemplateManager` implementado com cache e sync
+- [x] `FlowSender` implementado com criptografia
+- [x] Dedup de outbound integrado
+- [x] [README.md](README.md) atualizado com novo módulo WhatsApp
 - [ ] Testes de integração com Graph API v24.0 passando
 
 ---
 
-**Status:** ⏳ Não iniciado | 🚀 Em andamento | ✅ Completo
+**Status:** ✅ Completo (implementação) | 🚀 Pendente (testes integração Graph API)

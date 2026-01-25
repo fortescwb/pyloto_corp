@@ -90,179 +90,157 @@ class WhatsAppInboundPipeline:
     def process_webhook(
         self, payload: dict[str, Any], sender_phone: str | None = None
     ) -> PipelineResult:
-        """Processa payload do webhook do WhatsApp.
-
-        Args:
-            payload: Payload bruto do webhook Meta
-            sender_phone: Telefone do remetente (se disponível)
-
-        Returns:
-            PipelineResult com resumo e detalhes de processamento
-        """
-
+        """Processa payload do webhook do WhatsApp."""
         messages = extract_messages(payload)
         total_received = len(messages)
         total_deduped = 0
-        total_processed = 0
         processed: list[ProcessedMessage] = []
 
         for message in messages:
-            # Etapa 1: Deduplicação
-            is_duplicate = self._dedupe.check_and_mark(message.message_id)
-            if is_duplicate:
+            result, was_dedup = self._process_single_message(message, sender_phone)
+            if was_dedup:
                 total_deduped += 1
-                logger.debug(
-                    "Message deduplicated",
-                    extra={"message_id": message.message_id[:8] + "..."},
-                )
                 continue
+            if result:
+                processed.append(result)
 
-            total_processed += 1
+        total_processed = total_received - total_deduped
+        return self._build_result(total_received, total_deduped, total_processed, processed)
 
-            # Etapa 2: Recuperar/criar sessão
-            session = self._get_or_create_session(message, sender_phone)
-
-            # Etapa 3: Verificar flood
-            if self._flood:
-                flood_result = self._flood.check_and_record(session.session_id)
-                if flood_result.is_flooded:
-                    logger.warning(
-                        "Message rejected: flood detected",
-                        extra={
-                            "session_id": session.session_id[:8] + "...",
-                            "message_count": flood_result.message_count,
-                        },
-                    )
-                    session.outcome = Outcome.DUPLICATE_OR_SPAM
-                    self._sessions.save(session)
-                    processed.append(
-                        ProcessedMessage(
-                            message_id=message.message_id,
-                            is_duplicate=False,
-                            session_id=session.session_id,
-                            outcome=Outcome.DUPLICATE_OR_SPAM,
-                        )
-                    )
-                    continue
-
-            # Etapa 4: Verificar spam
-            if self._spam.is_spam(message.text or ""):
-                logger.warning(
-                    "Message rejected: spam detected",
-                    extra={"session_id": session.session_id[:8] + "..."},
-                )
-                session.outcome = Outcome.DUPLICATE_OR_SPAM
-                self._sessions.save(session)
-                processed.append(
-                    ProcessedMessage(
-                        message_id=message.message_id,
-                        is_duplicate=False,
-                        session_id=session.session_id,
-                        outcome=Outcome.DUPLICATE_OR_SPAM,
-                    )
-                )
-                continue
-
-            # Etapa 5: Verificar abuso
-            if self._abuse_checker.is_abuse(session):
-                logger.warning(
-                    "Message rejected: abuse pattern detected",
-                    extra={"session_id": session.session_id[:8] + "..."},
-                )
-                session.outcome = Outcome.DUPLICATE_OR_SPAM
-                self._sessions.save(session)
-                processed.append(
-                    ProcessedMessage(
-                        message_id=message.message_id,
-                        is_duplicate=False,
-                        session_id=session.session_id,
-                        outcome=Outcome.DUPLICATE_OR_SPAM,
-                    )
-                )
-                continue
-
-            # Etapa 6: Verificar se limite de intenções foi atingido
-            if session.intent_queue.is_at_capacity():
-                logger.info(
-                    "Session at max intents capacity",
-                    extra={
-                        "session_id": session.session_id[:8] + "...",
-                        "total_intents": session.intent_queue.total_intents(),
-                    },
-                )
-                session.outcome = Outcome.SCHEDULED_FOLLOWUP
-                self._sessions.save(session)
-                processed.append(
-                    ProcessedMessage(
-                        message_id=message.message_id,
-                        is_duplicate=False,
-                        session_id=session.session_id,
-                        outcome=Outcome.SCHEDULED_FOLLOWUP,
-                    )
-                )
-                continue
-
-            # Etapa 7: Orquestrar decisão de outcome
-            ai_response = self._orchestrator.process_message(
-                message, session=session, is_duplicate=False
+    def _process_single_message(
+        self, message: Any, sender_phone: str | None
+    ) -> tuple[ProcessedMessage | None, bool]:
+        """Processa uma mensagem e indica se foi deduplicada."""
+        if self._dedupe.check_and_mark(message.message_id):
+            logger.debug(
+                "Message deduplicated",
+                extra={"message_id": message.message_id[:8]},
             )
+            return None, True
 
-            # Etapa 8: Atualizar sessão com resultado
-            if ai_response.intent:
-                session.intent_queue.add_intent(
-                    ai_response.intent, confidence=ai_response.confidence
+        session = self._get_or_create_session(message, sender_phone)
+
+        abuse_result = self._check_abuse(message, session)
+        if abuse_result:
+            return abuse_result, False
+
+        capacity_result = self._check_intent_capacity(message, session)
+        if capacity_result:
+            return capacity_result, False
+
+        result = self._orchestrate_and_save(message, session)
+        return result, False
+
+    def _check_abuse(self, message: Any, session: SessionState) -> ProcessedMessage | None:
+        """Verifica flood, spam e padrões de abuso. Retorna ProcessedMessage se rejeitado."""
+        # Verificar flood
+        if self._flood:
+            flood_result = self._flood.check_and_record(session.session_id)
+            if flood_result.is_flooded:
+                logger.warning(
+                    "Message rejected: flood",
+                    extra={"session_id": session.session_id[:8]},
                 )
+                return self._reject_message(message, session, Outcome.DUPLICATE_OR_SPAM)
 
-            if ai_response.outcome:
-                session.outcome = ai_response.outcome
-
-            # Etapa 9: Persistir sessão
-            try:
-                self._sessions.save(session)
-            except Exception as e:
-                logger.error(
-                    "Failed to save session",
-                    extra={
-                        "session_id": session.session_id[:8] + "...",
-                        "error": str(e),
-                    },
-                )
-
-            processed.append(
-                ProcessedMessage(
-                    message_id=message.message_id,
-                    is_duplicate=False,
-                    session_id=session.session_id,
-                    outcome=ai_response.outcome or Outcome.AWAITING_USER,
-                    reply_text=ai_response.reply_text,
-                )
+        # Verificar spam
+        if self._spam.is_spam(message.text or ""):
+            logger.warning(
+                "Message rejected: spam",
+                extra={"session_id": session.session_id[:8]},
             )
+            return self._reject_message(message, session, Outcome.DUPLICATE_OR_SPAM)
 
+        # Verificar abuso
+        if self._abuse_checker.is_abuse(session):
+            logger.warning(
+                "Message rejected: abuse",
+                extra={"session_id": session.session_id[:8]},
+            )
+            return self._reject_message(message, session, Outcome.DUPLICATE_OR_SPAM)
+
+        return None
+
+    def _check_intent_capacity(
+        self, message: Any, session: SessionState
+    ) -> ProcessedMessage | None:
+        """Verifica se sessão atingiu limite de intenções."""
+        if session.intent_queue.is_at_capacity():
             logger.info(
-                "Message processed",
-                extra={
-                    "message_id": message.message_id[:8] + "...",
-                    "session_id": session.session_id[:8] + "...",
-                    "outcome": ai_response.outcome,
-                },
+                "Session at max intents",
+                extra={"session_id": session.session_id[:8]},
             )
+            return self._reject_message(message, session, Outcome.SCHEDULED_FOLLOWUP)
+        return None
 
-        summary = WebhookProcessingSummary(
-            total_received=total_received,
-            total_deduped=total_deduped,
-            total_processed=total_processed,
+    def _reject_message(
+        self, message: Any, session: SessionState, outcome: Outcome
+    ) -> ProcessedMessage:
+        """Rejeita mensagem com outcome específico e persiste sessão."""
+        session.outcome = outcome
+        self._sessions.save(session)
+        return ProcessedMessage(
+            message_id=message.message_id, is_duplicate=False,
+            session_id=session.session_id, outcome=outcome,
         )
 
+    def _orchestrate_and_save(
+        self, message: Any, session: SessionState
+    ) -> ProcessedMessage:
+        """Orquestra IA, atualiza e persiste sessão."""
+        ai_response = self._orchestrator.process_message(
+            message, session=session, is_duplicate=False
+        )
+
+        if ai_response.intent:
+            session.intent_queue.add_intent(
+                ai_response.intent, confidence=ai_response.confidence
+            )
+        if ai_response.outcome:
+            session.outcome = ai_response.outcome
+
+        try:
+            self._sessions.save(session)
+        except Exception as e:
+            logger.error(
+                "Failed to save session",
+                extra={"session_id": session.session_id[:8], "error": str(e)},
+            )
+
+        outcome = ai_response.outcome or Outcome.AWAITING_USER
         logger.info(
-            "Webhook processing complete",
+            "Message processed",
+            extra={"message_id": message.message_id[:8], "outcome": outcome},
+        )
+        return ProcessedMessage(
+            message_id=message.message_id, is_duplicate=False, session_id=session.session_id,
+            outcome=outcome, reply_text=ai_response.reply_text,
+        )
+
+    def _build_result(
+        self,
+        total_received: int,
+        total_deduped: int,
+        total_processed: int,
+        processed: list[ProcessedMessage],
+    ) -> PipelineResult:
+        """Monta resultado final do pipeline."""
+        logger.info(
+            "Webhook complete",
             extra={
-                "total_received": total_received,
-                "total_deduped": total_deduped,
-                "total_processed": total_processed,
+                "received": total_received,
+                "deduped": total_deduped,
+                "processed": total_processed,
             },
         )
-
-        return PipelineResult(summary=summary, processed_messages=processed)
+        return PipelineResult(
+            summary=WebhookProcessingSummary(
+                total_received=total_received,
+                total_deduped=total_deduped,
+                total_processed=total_processed,
+            ),
+            processed_messages=processed,
+        )
 
     def _get_or_create_session(
         self, message: Any, sender_phone: str | None = None

@@ -321,32 +321,40 @@ def create_dedupe_store(settings: Settings | None = None) -> DedupeStore:
         settings = get_settings()
 
     backend = settings.dedupe_backend.lower()
-
     if backend == "memory":
-        logger.info(
-            "Usando InMemoryDedupeStore (apenas dev/testes)",
-            extra={"ttl_seconds": settings.dedupe_ttl_seconds},
-        )
-        return InMemoryDedupeStore(ttl_seconds=settings.dedupe_ttl_seconds)
+        return _create_memory_store(settings)
 
     if backend == "redis":
-        if not settings.redis_url:
-            raise ValueError("REDIS_URL é obrigatório quando dedupe_backend=redis")
-
-        # Em produção, sempre fail-closed
-        fail_closed = settings.is_production
-
-        logger.info(
-            "Usando RedisDedupeStore",
-            extra={
-                "ttl_seconds": settings.dedupe_ttl_seconds,
-                "fail_closed": fail_closed,
-            },
-        )
-        return RedisDedupeStore(
-            redis_url=settings.redis_url,
-            ttl_seconds=settings.dedupe_ttl_seconds,
-            fail_closed=fail_closed,
-        )
+        return _create_redis_store(settings)
 
     raise ValueError(f"Backend de dedupe não reconhecido: {backend}")
+
+
+def _create_memory_store(settings: Settings) -> DedupeStore:
+    """Cria store em memória (dev/testes)."""
+    logger.info(
+        "Usando InMemoryDedupeStore (apenas dev/testes)",
+        extra={"ttl_seconds": settings.dedupe_ttl_seconds},
+    )
+    return InMemoryDedupeStore(ttl_seconds=settings.dedupe_ttl_seconds)
+
+
+def _create_redis_store(settings: Settings) -> DedupeStore:
+    """Cria store Redis com fail-closed opcional."""
+    if not settings.redis_url:
+        raise ValueError("REDIS_URL é obrigatório quando dedupe_backend=redis")
+
+    fail_closed = settings.is_production
+
+    logger.info(
+        "Usando RedisDedupeStore",
+        extra={
+            "ttl_seconds": settings.dedupe_ttl_seconds,
+            "fail_closed": fail_closed,
+        },
+    )
+    return RedisDedupeStore(
+        redis_url=settings.redis_url,
+        ttl_seconds=settings.dedupe_ttl_seconds,
+        fail_closed=fail_closed,
+    )

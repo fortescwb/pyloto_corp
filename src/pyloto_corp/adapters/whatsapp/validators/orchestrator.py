@@ -61,7 +61,12 @@ class WhatsAppMessageValidator:
     @classmethod
     def _validate_recipient(cls, request: OutboundMessageRequest) -> None:
         """Valida formato do destinatário."""
-        if not request.to or not request.to.startswith("+"):
+        if not request.to:
+            raise ValidationError(
+                "Recipient must be in E.164 format (e.g., +5511999999999)"
+            )
+
+        if not request.to.startswith("+") or not request.to[1:].isdigit():
             raise ValidationError(
                 "Recipient must be in E.164 format (e.g., +5511999999999)"
             )
@@ -72,6 +77,9 @@ class WhatsAppMessageValidator:
         request: OutboundMessageRequest,
     ) -> MessageType:
         """Valida e retorna o tipo de mensagem."""
+        if not request.message_type:
+            raise ValidationError("message_type is required")
+
         try:
             return MessageType(request.message_type)
         except ValueError:

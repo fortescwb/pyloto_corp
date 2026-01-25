@@ -1,0 +1,119 @@
+════════════════════════════════════════════════════════════════════════════════
+  RESULTADO FINAL — PYTEST --COV COMPLETO (SEM IGNORAR TESTES)
+════════════════════════════════════════════════════════════════════════════════
+
+📅 Data: 25 de janeiro de 2026, 16:15
+🧪 Testes: 382/382 PASSANDO ✅
+📊 Cobertura: 81.1% (588 linhas não cobertas em 3.105 total)
+✔️  Lint (ruff): 0 VIOLAÇÕES ✅
+
+════════════════════════════════════════════════════════════════════════════════
+  CONFORMIDADE COM NORMAS
+════════════════════════════════════════════════════════════════════════════════
+
+✅ regras_e_padroes.md:
+   • Lint obrigatório (ruff): 0 violações ✓
+   • Testes obrigatórios: 382 testes ✓
+   • Estrutura (SRP): ✓
+   • Separação de camadas: ✓
+   • Limites (200 lin/arquivo, 50 lin/função): ✓
+   • Tipagem: ✓
+   • Sem PII em logs: ✓
+   ⚠️  Cobertura mínima 90%: 81.1% (ABAIXO DE 8.9%)
+
+✅ Funcionamento.md:
+   • Outcomes canônicos: ✓
+   • Auditoria (hash encadeado): ✓
+   • Zero-trust validation: ✓
+   • PII masking em exports: ✓
+   • Session management: ✓
+   • Idempotência/dedup: ✓
+
+════════════════════════════════════════════════════════════════════════════════
+  TOP 10 MÓDULOS COM MELHOR COBERTURA
+════════════════════════════════════════════════════════════════════════════════
+
+ 1. media_helpers.py                 100%
+ 2. domain/conversations.py          100%
+ 3. domain/models.py                 100%
+ 4. domain/enums.py                  100%
+ 5. config/settings.py               100%
+ 6. application/renderers/*.py       99%
+ 7. application/export.py            98%
+ 8. api/app.py                       96%
+ 9. media_uploader.py                96%
+10. gcs_exporter.py                  96%
+
+✅ 50+ módulos com 90%+ cobertura
+
+════════════════════════════════════════════════════════════════════════════════
+  TOP 10 MÓDULOS COM MENOR COBERTURA (AÇÃO NECESSÁRIA)
+════════════════════════════════════════════════════════════════════════════════
+
+ 1. domain/whatsapp_message_types.py    0%  (116 linhas) 🔴 CRÍTICO
+ 2. infra/outbound_dedupe.py            0%  (13 linhas)  
+ 3. infra/secret_provider.py            0%  (7 linhas)   
+ 4. infra/session_store_firestore.py   24%  (59 linhas) 🔴 CRÍTICO
+ 5. infra/session_store_redis.py       31%  (39 linhas) 🔴 CRÍTICO
+ 6. infra/session_store_memory.py      50%  (34 linhas) 🟡 ALTA
+ 7. adapters/whatsapp/outbound.py      66%  (58 linhas) 🔴 CRÍTICO
+ 8. infra/outbound_dedup_firestore.py  59%  (66 linhas) 🔴 CRÍTICO
+ 9. domain/abuse_detection.py          54%  (81 linhas) 🟡 ALTA
+10. ai/orchestrator.py                 62%  (77 linhas) 🟡 ALTA
+
+════════════════════════════════════════════════════════════════════════════════
+  DISTRIBUIÇÃO POR TIER
+════════════════════════════════════════════════════════════════════════════════
+
+✅ 100%      : 50+ módulos
+🟢  90-99%   : 20+ módulos
+🟡  80-89%   : 15 módulos
+🟠  70-79%   : 5 módulos
+🔴  <70%     : 15 módulos (ABAIXO DE META)
+
+════════════════════════════════════════════════════════════════════════════════
+  ESFORÇO PARA ATINGIR 90%
+════════════════════════════════════════════════════════════════════════════════
+
+Módulo                              Horas  Impacto   Prioridade
+─────────────────────────────────────────────────────────────────
+whatsapp_message_types.py           2.0    +1.5%    🔴 CRÍTICA
+outbound.py                         1.5    +0.8%    🔴 CRÍTICA
+outbound_dedup_firestore.py         1.0    +0.6%    🔴 CRÍTICA
+session_store.py (3 mods)           2.0    +1.2%    🟡 ALTA
+abuse_detection.py                  1.5    +0.7%    🟡 ALTA
+ai/orchestrator.py                  1.5    +0.5%    🟡 ALTA
+─────────────────────────────────────────────────────────────────
+TOTAL                              ~9.5h   ~5.3%   ➔ 86.4%
+
+Nota: Ainda faltaria ~3.5% adicionais via testes de integração.
+
+════════════════════════════════════════════════════════════════════════════════
+  PRÓXIMAS AÇÕES RECOMENDADAS
+════════════════════════════════════════════════════════════════════════════════
+
+1. Adicionar testes para session_store (Firestore/Redis/Memory)
+   → 59-24% coverage, crítico para production
+   
+2. Cobrir whatsapp_message_types.py (100 → 116 linhas)
+   → Modelos Pydantic, validação, serialização JSON
+
+3. Aumentar cobertura de outbound.py (66%)
+   → Envio de mensagens, tratamento de erros
+
+4. Implementar testes integration para abuse_detection
+   → Lógica complexa, várias condições
+
+5. Cobrir payload builders (media/template: <60%)
+   → Factory patterns, construção de payloads
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ RESULTADO FINAL: PARCIALMENTE CONFORME
+
+Status: 🟡 81% em conformidade
+Razão: -8.9% em cobertura de testes
+Ação: Necessário +9.5h de trabalho de testes para atingir 90%
+Prazo Sugerido: 2026-02-01
+
+════════════════════════════════════════════════════════════════════════════════

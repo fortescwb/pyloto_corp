@@ -16,6 +16,17 @@ from pyloto_corp.domain.conversations import (
     Page,
 )
 from pyloto_corp.domain.profile import UserProfile, UserProfileStore
+from pyloto_corp.domain.secret_provider import SecretProvider
+
+
+class FakeSecretProvider(SecretProvider):
+    """Mock de SecretProvider para testes."""
+
+    def get_pepper_secret(self) -> str:
+        return "test-pepper-secret"
+
+    def get_secret(self, name: str) -> str:
+        return f"fake-{name}"
 
 
 class FakeConversationStore(ConversationStore):
@@ -147,6 +158,7 @@ def create_export_use_case(
     audit_store = FakeAuditStore()
     exporter = FakeExporter()
     audit_recorder = RecordAuditEventUseCase(store=audit_store)
+    secret_provider = FakeSecretProvider()
 
     return ExportConversationUseCase(
         conversation_store=conv_store,
@@ -154,5 +166,6 @@ def create_export_use_case(
         audit_store=audit_store,
         history_exporter=exporter,
         audit_recorder=audit_recorder,
+        secret_provider=secret_provider,
         default_include_pii=False,
     )

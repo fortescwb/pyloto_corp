@@ -7,6 +7,7 @@ from fastapi import Request
 from pyloto_corp.ai.orchestrator import AIOrchestrator
 from pyloto_corp.config.settings import Settings
 from pyloto_corp.infra.dedupe import DedupeStore
+from pyloto_corp.infra.session_store import SessionStore
 
 
 def get_settings(request: Request) -> Settings:
@@ -25,3 +26,9 @@ def get_orchestrator(request: Request) -> AIOrchestrator:
     """Retorna o orquestrador de IA."""
 
     return request.app.state.orchestrator
+
+
+def get_session_store(request: Request) -> SessionStore:
+    """Retorna o store de sessão ativo."""
+
+    return request.app.state.session_store

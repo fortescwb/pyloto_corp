@@ -9,10 +9,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 
 from pyloto_corp.adapters.whatsapp.signature import verify_meta_signature
 from pyloto_corp.ai.orchestrator import AIOrchestrator
-from pyloto_corp.api.dependencies import get_dedupe_store, get_orchestrator, get_settings
+from pyloto_corp.api.dependencies import (
+    get_dedupe_store,
+    get_orchestrator,
+    get_session_store,
+    get_settings,
+)
 from pyloto_corp.application.pipeline import process_whatsapp_webhook
 from pyloto_corp.config.settings import Settings
 from pyloto_corp.infra.dedupe import DedupeStore
+from pyloto_corp.infra.session_store import SessionStore
 from pyloto_corp.observability.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +26,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-           
+
 @router.get("/health")
 def health(settings: Settings = Depends(get_settings)) -> dict[str, str]:
     """Healthcheck simples para Cloud Run."""
@@ -58,6 +64,7 @@ async def whatsapp_webhook(
     request: Request,
     settings: Settings = Depends(get_settings),
     dedupe_store: DedupeStore = Depends(get_dedupe_store),
+    session_store: SessionStore = Depends(get_session_store),
     orchestrator: AIOrchestrator = Depends(get_orchestrator),
 ) -> dict[str, Any]:
     """Recebe eventos do WhatsApp (batch-safe)."""
@@ -76,12 +83,14 @@ async def whatsapp_webhook(
     try:
         payload = json.loads(raw_body or b"{}")
     except json.JSONDecodeError as exc:
-           
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_json"
         ) from exc
 
-    result = process_whatsapp_webhook(payload, dedupe_store, orchestrator)
+    result = process_whatsapp_webhook(
+        payload, dedupe_store, session_store, orchestrator
+    )
     result.summary.signature_validated = not signature_result.skipped
     result.summary.signature_skipped = signature_result.skipped
 

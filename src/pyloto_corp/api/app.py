@@ -8,6 +8,7 @@ from pyloto_corp.ai.orchestrator import AIOrchestrator
 from pyloto_corp.api.routes import router
 from pyloto_corp.config.settings import Settings, get_settings
 from pyloto_corp.infra.dedupe import InMemoryDedupeStore, RedisDedupeStore
+from pyloto_corp.infra.session_store import create_session_store
 from pyloto_corp.observability.logging import configure_logging
 from pyloto_corp.observability.middleware import CorrelationIdMiddleware
 
@@ -36,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.state.settings = settings
     app.state.dedupe_store = create_dedupe_store(settings)
+    app.state.session_store = create_session_store("memory")
     app.state.orchestrator = AIOrchestrator()
 
     return app

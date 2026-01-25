@@ -82,7 +82,7 @@ class OutboundMessageRequest(BaseModel):
     """Requisição para enviar uma mensagem outbound."""
 
     to: str  # Phone number E.164
-    message_type: str  # Tipo técnico (text, image, etc.)
+    message_type: str | None = None  # Tipo técnico (text, image, etc.)
     text: str | None = None
     media_id: str | None = None  # Media ID previamente hospedado
     media_url: str | None = None  # URL público para upload

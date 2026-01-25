@@ -51,55 +51,35 @@ Dividir método `execute()` de 100+ linhas em sub-funções e classes auxiliares
 
 ---
 
-### ☐ Implementar HistoryExporterProtocol concreto
+### ✅ Implementar HistoryExporterProtocol concreto
 
-**Descrição:**
-Criar implementação concreta que salva exportações em GCS com URLs assinadas.
+**Status:** CONCLUÍDO (25/01/2026 20:00)
 
-**Arquivo:**
-`src/pyloto_corp/infra/exporters/gcs_exporter.py`
+**Implementação:**
+- Arquivo: `src/pyloto_corp/infra/gcs_exporter.py` (290 linhas, expandido)
+- Classe: `GCSHistoryExporter`
+- Métodos:
+  - `save(user_key, content, content_type) -> str` - Upload básico
+  - `save_with_metadata(...) -> ExportMetadata` - Com URL assinada
+  - `generate_signed_url(object_name, days) -> str` - URL assinada v4
+  - `cleanup_old_exports(retention_days) -> int` - Remove antigos
+- Funcionalidades:
+  - Upload para bucket GCS com path organizado por data
+  - Geração de URL assinada (v4) com expiração configurável
+  - Persistência de metadados em Firestore (opcional)
+  - Cleanup de exports antigos com retention policy
+  - Limpeza de metadados do Firestore no cleanup
+  - Factory: `create_gcs_exporter()`
 
-**Responsabilidades:**
+**Dataclasses:**
+- `ExportMetadata` - gcs_uri, signed_url, user_key, created_at, expires_at, size_bytes
 
-- Salvar arquivo exportado em bucket GCS (`export_bucket`)
-- Gerar URL assinada (válida por 7 dias)
-- Retornar metadados (path interno, URL, timestamp)
-- Implementar cleanup de exports antigos (retention policy)
-
-**Interface:**
-
-```python
-class GcsHistoryExporter(HistoryExporterProtocol):
-    async def export(
-        self,
-        conversation_id: str,
-        format: str = "json"
-    ) -> ExportMetadata:
-        """Exporta e retorna metadados"""
-        pass
-
-    async def cleanup_old_exports(
-        self,
-        retention_days: int = 180
-    ) -> int:
-        """Remove exports mais antigos"""
-        pass
-```
-
-**Critério de Aceitação:**
-
-- Classe implementada com métodos principais
-- Testes com GCS emulador (ou mocks)
-- URLs assinadas gradas com expiração
-- Cleanup automático via Cloud Scheduler
-- Logs estruturados
-
-**Notas de Implementação:**
-
-- Usar cliente `google.cloud.storage`
-- Formato padrão: JSON (com suporte a PDF futuro)
-- URL assinada com 7 dias de validade
-- Armazenar metadados em Firestore (`exports` collection)
+**Testes:** `tests/unit/test_gcs_exporter.py` (320 linhas, 22 testes)
+- Save básico e com metadados
+- Geração de URL assinada (v4, GET, expiração)
+- Cleanup (deleta antigos, mantém recentes)
+- Cleanup de metadados Firestore
+- Factory e edge cases (vazio, grande, Unicode)
 
 ---
 
@@ -160,60 +140,101 @@ Implementação concreta de `ConversationStore` usando Firestore.
 
 ---
 
-### ☐ Criar UserProfileStore em Firestore
+### ✅ Criar UserProfileStore em Firestore
 
-**Descrição:**
-Implementação concreta de `UserProfileStore` usando Firestore.
+**Status:** CONCLUÍDO (25/01/2026 18:30)
 
-**Arquivo:**
-`src/pyloto_corp/infra/stores/user_profile_store.py`
+**Implementação:**
+- Arquivo domínio: `src/pyloto_corp/domain/profile.py` (expandido para 110 linhas)
+  - `UserProfile` com campos adicionais (city, is_business, lead_score, etc.)
+  - `QualificationLevel` enum (COLD, WARM, HOT, QUALIFIED)
+  - `ProfileUpdateEvent` dataclass para histórico
+  - `UserProfileStore` protocol expandido
 
-**Responsabilidades:**
+- Arquivo infra: `src/pyloto_corp/infra/firestore_profiles.py` (220 linhas)
+- Classe: `FirestoreUserProfileStore`
+- Métodos:
+  - `get_profile(user_key) -> UserProfile | None`
+  - `get_by_phone(phone_e164) -> UserProfile | None` (dedup)
+  - `upsert_profile(profile) -> None`
+  - `update_field(user_key, field, value, actor) -> bool` (com histórico)
+  - `get_update_history(user_key, limit) -> list[ProfileUpdateEvent]`
+  - `forget(user_key) -> bool` (LGPD)
 
-- Salvar perfil de usuário em collection `user_profiles`
-- Recuperar perfil por ID
-- Atualizar perfil (nome, cidade, tipo)
-- Implementar busca por phone com dedup
-- Registrar histórico de atualizações
-
-**Schema:**
-
-```schema sugerido
-/user_profiles/{user_id}
-  ├── phone: str (E164 format)
-  ├── name: str
-  ├── city: str
-  ├── is_business: bool
-  ├── business_name: str | null
-  ├── role: str | null
-  ├── lead_score: int
-  ├── qualification_level: str
-  ├── created_at: timestamp
-  ├── updated_at: timestamp
-  ├── last_interaction: timestamp
-  └── metadata: map
+**Schema Firestore:**
+```
+/user_profiles/{user_key}
+  ├── phone_e164, display_name, city
+  ├── is_business, business_name, role
+  ├── lead_score, qualification_level
+  ├── collected_fields (map)
+  ├── created_at, updated_at, last_interaction
+  └── /history/{event_id}
+        ├── timestamp, field_changed
+        ├── old_value, new_value (mascarados)
+        └── actor
 ```
 
-**Critério de Aceitação:**
+**Funcionalidades:**
+- CRUD completo com validação
+- Busca por phone (dedup de contatos)
+- Histórico de atualizações em subcollection
+- LGPD forget: remove perfil e histórico
+- Mascaramento de PII em logs e histórico
 
-- Store implementado com CRUD básico
-- Dedup de phone funcionando
-- Testes com Firestore emulador
-- Logs estruturados de atualizações
-
-**Notas de Implementação:**
-
-- Phone em E164 format (ex.: +5511999999999)
-- Índice em `phone` para lookup rápido
-- Histórico em subcollection opcional
-- Respeitar LGPD/GDPR (direito ao esquecimento)
+**Testes:** `tests/integration/test_user_profile_store.py` (380 linhas, 25 testes)
+- CRUD: get, upsert, get_by_phone
+- Update com histórico
+- LGPD forget
+- Edge cases (negócios, lead_score, qualificação)
 
 ---
 
-### ☐ Criar AuditLogStore em Firestore
+### ✅ Criar AuditLogStore em Firestore
 
-**Descrição:**
-Implementação concreta de `AuditLogStore` com trilha encadeada (hashing).
+**Status:** CONCLUÍDO (25/01/2026 17:12)
+
+**Implementação:**
+- Arquivo: `src/pyloto_corp/infra/firestore_audit.py` (220 linhas)
+- Classe: `FirestoreAuditLogStore` (implementa `AuditLogStore`)
+- Métodos:
+  - `get_latest_event(user_key) -> AuditEvent | None`
+  - `list_events(user_key, limit=500) -> list[AuditEvent]`
+  - `append_event(event, expected_prev_hash) -> bool`
+  
+**Funcionalidades:**
+- Append-only: eventos nunca modificados
+- Encadeamento por hash: SHA256(canonical_json(event) + prev_hash)
+- Transacional: Firestore transactions garantem atomicidade
+- Concorrência: tolerante (retry no app layer via `RecordAuditEventUseCase`)
+- Logging: estruturado sem PII
+
+**Schema Firestore:**
+```
+/conversations/{user_key}/audit/{event_id}
+├── event_id: str
+├── user_key: str
+├── tenant_id: str | None
+├── timestamp: datetime
+├── actor: str (SYSTEM | HUMAN)
+├── action: str (USER_CONTACT | EXPORT_GENERATED | ...)
+├── reason: str
+├── prev_hash: str | None
+├── hash: str (SHA256)
+└── correlation_id: str | None
+```
+
+**Testes:** `tests/integration/test_firestore_audit.py` (280 linhas, 13 testes)
+- Get latest event (existe, vazio, malformado)
+- List events (ordenação, limite, malformados)
+- Append com sucesso
+- Append com conflito de cadeia (race condition)
+- Integridade: hash muda se evento modificado
+- Tampering detection via hash mismatch
+
+---
+
+### ☐ Criar AuditLogStore em Firestore (ADICIONAL)
 
 **Arquivo:**
 `src/pyloto_corp/infra/stores/audit_log_store.py`

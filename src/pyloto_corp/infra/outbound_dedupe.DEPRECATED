@@ -1,0 +1,19 @@
+"""
+[DEPRECATED] Este arquivo foi refatorado em 25/01/2026 para atender regra 2.1 (máx 200 linhas).
+
+Divisão:
+- domain/outbound_dedup.py — Protocolo e DTOs
+- application/services/dedup_service.py — Lógica de hashing
+- infra/outbound_dedup_memory.py — Implementação Memory
+- infra/outbound_dedup_redis.py — Implementação Redis
+- infra/outbound_dedup_firestore.py — Implementação Firestore
+- infra/outbound_dedup_factory.py — Factory
+
+Motivo: Violava SRP e limite de 200 linhas (496 linhas total).
+Conformidade: Regra 2.1 de regras_e_padroes.md
+
+Uso antigo:
+    from pyloto_corp.infra.outbound_dedupe import create_outbound_dedupe_store
+Novo uso:
+    from pyloto_corp.infra.outbound_dedup_factory import create_outbound_dedupe_store
+"""
