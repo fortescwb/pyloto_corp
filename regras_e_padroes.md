@@ -1,220 +1,238 @@
-# Regras e Padrões de Código — pyloto_corp
+# Regras e Padrões de Código
 
-Este documento define as **regras obrigatórias de organização, escrita e manutenção de código** para o repositório **`pyloto_corp`**.
+Este documento define as **regras absolutas, congeladas e não negociáveis** de código do repositório `pyloto_corp`.
 
-O objetivo é garantir que o código permaneça **legível, modular, auditável, seguro e sustentável** ao longo do tempo, mesmo com crescimento do projeto, entrada de novos desenvolvedores ou uso intensivo de LLMs como apoio.
-
-Estas regras **não são sugestões**. São **padrões a serem seguidos**.
+Ele é a **fonte única de verdade** sobre qualidade, estilo, segurança, testes e critérios de aceite.
+Qualquer código que viole estas regras é considerado **incorreto**, independentemente de funcionar em produção.
 
 ---
 
 ## 1. Princípios Fundamentais
 
-Antes de qualquer regra técnica, este repositório adota os seguintes princípios:
+### 1.1 Clareza como valor primário
 
-* Código é lido mais vezes do que é escrito.
-* Segurança e previsibilidade vêm antes de conveniência.
-* Clareza vence esperteza.
-* Falhar de forma segura é sempre melhor do que “tentar adivinhar”.
-* Nenhum módulo deve depender de boa-fé do usuário.
+Código deve ser lido, entendido e auditado por terceiros sem explicações verbais.
+Soluções inteligentes porém opacas são proibidas.
 
----
+### 1.2 Simplicidade estrutural
 
-## 2. Tamanho Máximo de Arquivos (Modularidade)
+Abstrações só são permitidas quando reduzem complexidade real.
+Abstrações criadas "para o futuro" são consideradas débito técnico imediato.
 
-Embora o Python não imponha limites técnicos rígidos, o projeto adota **limites práticos de engenharia** baseados em boas práticas modernas (2026).
+### 1.3 Previsibilidade e determinismo
 
-### 2.1 Limites de linhas por arquivo
+O comportamento do sistema deve ser previsível a partir do código.
+Side effects implícitos, dependência de estado global ou ordem de execução são proibidos.
 
-| Tamanho do arquivo  | Classificação | Ação recomendada           |
-| ------------------- | ------------- | -------------------------- |
-| Até 200 linhas      | Excelente     | Nenhuma                    |
-| 200–400 linhas      | Bom           | Aceitável                  |
-| 400–500 linhas      | Atenção       | Avaliar refatoração        |
-| Acima de 500 linhas | Alerta        | Refatorar obrigatoriamente |
+### 1.4 Defesa em profundidade (zero‑trust)
 
-Arquivos acima de **500 linhas** são considerados **módulos inflados** e indicam violação de coesão ou responsabilidade única.
-
-> Arquivos grandes demais tendem a virar “God Objects”, dificultam testes, revisão e segurança.
+O sistema **não presume boa‑fé**.
+Todo input externo é potencialmente malicioso e deve ser validado.
 
 ---
 
-## 3. Princípio da Responsabilidade Única (SRP)
+## 2. Estrutura de Código
 
-Mais importante que o número de linhas é o **propósito do arquivo**.
+### 2.1 Tamanho máximo
 
-### Regras obrigatórias
+**Objetivo:** manter legibilidade, testabilidade e baixo custo cognitivo.
 
-* Cada arquivo deve ter **um único propósito claro**.
-* Se for necessário “procurar demais” uma função, o arquivo já está grande demais.
-* Um arquivo não deve misturar:
+* Arquivos de código: **máx. 200 linhas**
+* Funções ou métodos: **máx. 50 linhas**
 
-  * lógica de domínio + infraestrutura
-  * validação + persistência
-  * construção de payload + envio externo
+Exceções:
 
-### Pergunta de validação
+* Só são permitidas quando a fragmentação **piorar** a clareza.
+* Devem conter comentário explícito justificando a exceção.
 
-> “Eu consigo explicar este arquivo em uma frase curta?”
+### 2.2 Responsabilidade única
 
-Se a resposta for não, o arquivo deve ser dividido.
+Cada arquivo deve responder claramente à pergunta:
 
----
+> “Qual problema específico este módulo resolve?”
+> "Eu consigo resumir o que esse arquivo faz em uma única frase?"
 
-## 4. Tamanho de Funções e Métodos
+Arquivos que respondem a mais de uma responsabilidade são inválidos.
 
-### 4.1 Funções
+### 2.3 Separação de camadas
 
-* Ideal: **20 a 50 linhas**
-* Máximo aceitável: **~60 linhas**
-* Funções maiores que isso:
+As seguintes camadas **não devem se misturar**:
 
-  * estão fazendo coisas demais
-  * escondem regras de negócio
-  * dificultam testes unitários
+* Domínio (regras, validações, contratos)
+* Orquestração (fluxos, coordenação)
+* Infraestrutura (IO, APIs, banco, rede)
 
-Funções longas devem ser quebradas em:
-
-* funções auxiliares
-* pequenos pipelines
-* etapas nomeadas explicitamente
-
-### 4.2 Classes
-
-* Classes devem ser **concisas e focadas**.
-* Classes com centenas de linhas indicam:
-
-  * excesso de responsabilidades
-  * acoplamento indevido
-  * dificuldade de extensão segura
-
-Prefira:
-
-* composição em vez de herança
-* classes pequenas e previsíveis
-* contratos explícitos
+Violação dessa separação é considerada falha arquitetural grave.
 
 ---
 
-## 5. Largura de Linha e Legibilidade (PEP 8)
+## 3. Estilo, Legibilidade e Nomenclatura
 
-Para manter legibilidade em revisões, diffs e diferentes monitores:
+### 3.1 Código autoexplicativo
 
-* **Código**: máximo **79 caracteres**
-* **Docstrings e comentários**: máximo **72 caracteres**
+O código deve explicar **o que faz** apenas pela leitura.
+Comentários são usados apenas para explicar **por que** algo existe.
 
-Mesmo que ferramentas modernas permitam mais, este repositório **mantém o padrão clássico do PEP 8** por clareza e consistência.
+### 3.2 Comentários
 
-### Observações
+* Idioma obrigatório: **PT‑BR**
+* Comentários redundantes são proibidos
+* Comentários desatualizados são considerados bug
 
-* Quebras de linha são preferíveis a linhas longas.
-* Código legível vence código compacto.
+### 3.3 Nomes
 
----
-
-## 6. Comentários e Docstrings
-
-### Regras obrigatórias para comentários e docstrings
-
-* **Todos os comentários devem ser em Português_BR**
-* Docstrings devem explicar:
-
-  * o “porquê” da existência
-  * o contrato esperado
-  * efeitos colaterais relevantes
-
-### Comentários não devem
-
-* repetir o que o código já diz
-* explicar sintaxe óbvia
-* mascarar código confuso
-
-Se um comentário for longo demais, o código provavelmente precisa ser refatorado.
+* Nomes devem ser descritivos e completos
+* Abreviações só são permitidas se amplamente consagradas
+* Variáveis de uma letra são proibidas fora de laços muito locais
 
 ---
 
-## 7. Organização Arquitetural
+## 4. Tipagem, Contratos e Validação
 
-O projeto segue separação explícita por camadas:
+### 4.1 Tipagem explícita
 
-* `domain/` → regras puras, contratos, modelos
-* `application/` → casos de uso, orquestração
-* `infra/` → Firestore, GCS, APIs externas
-* `adapters/` → WhatsApp, HTTP, normalização
-* `api/` → FastAPI, rotas, dependências
+Entradas, saídas e estruturas internas devem ser tipadas sempre que a linguagem permitir.
 
-### Regras
+### 4.2 Contratos claros
 
-* Domínio **não conhece infraestrutura**
-* Infraestrutura **não decide regra de negócio**
-* Adaptadores **não contêm lógica crítica**
+Toda função deve deixar explícito:
 
----
+* O que espera receber
+* O que retorna
+* Em quais condições falha
 
-## 8. Segurança e Zero-Trust (Obrigatório)
+### 4.3 Falha explícita
 
-* Nunca assumir boa-fé do usuário.
-* Todo input é potencialmente malicioso.
-* Nenhum payload externo deve ser confiável.
-* Logs **nunca** devem conter PII.
-* Decisões críticas **não pertencem à IA**.
-
-Arquivos devem ser escritos considerando:
-
-* abuso
-* tentativa de exploração
-* auditoria futura
+Falhas silenciosas são proibidas.
+Toda inconsistência deve resultar em erro explícito, rastreável e testável.
 
 ---
 
-## 9. Ferramentas de Monitoramento e Qualidade
+## 5. Logs e Observabilidade
 
-### 9.1 Ruff (Obrigatório)
+### 5.1 Proteção de dados
 
-* Linting
-* Estilo
-* Detecção de arquivos e funções excessivas
-* Ordenação de imports
+* **Nunca** logar PII ou payload sensível
+* Logs devem ser seguros mesmo em caso de vazamento
 
-Ruff é considerado **ferramenta padrão** do projeto.
+### 5.2 Estrutura
 
-### 9.2 Complexidade Ciclomática
-
-Ferramentas recomendadas:
-
-* **Radon**
-* **Xenon**
-
-Observação importante:
-
-> Um arquivo de 100 linhas pode ser pior que um de 300 se a lógica for profundamente aninhada.
-
-Complexidade excessiva deve ser tratada como **problema de arquitetura**, não apenas de estilo.
+* Logs estruturados
+* Campos previsíveis
+* Mensagens objetivas, sem ruído
 
 ---
 
-## 10. Critérios de Aceitação para Código Novo
+## 6. Segurança (Premissa Permanente)
 
-Antes de aceitar qualquer alteração, o código deve atender a:
+### 6.1 Input externo
 
-* Arquivos dentro dos limites de tamanho
-* Funções pequenas e testáveis
-* Responsabilidade única clara
-* Comentários em Português_BR
-* Nenhum vazamento de PII
-* Testes existentes ou adicionados
-* Ruff e pytest passando
+Todo input externo deve ser tratado como hostil:
 
-Se um desses pontos falhar, o código **não está pronto**.
+* Validar formato
+* Validar limites
+* Validar permissões
+
+### 6.2 Decisões críticas
+
+Nenhuma decisão crítica pode depender exclusivamente de dados fornecidos pelo cliente.
+
+---
+
+## 7. Testes — Fonte de Verdade Funcional
+
+Testes são **obrigatórios** e representam o contrato executável do sistema.
+
+### 7.1 O que deve ser testado
+
+Para cada função, regra ou fluxo relevante:
+
+#### a) Caminho Feliz (Happy Path)
+
+* Pelo menos **1 teste** validando o comportamento esperado com dados válidos
+
+#### b) Casos de Borda (Edge Cases)
+
+* Entradas vazias
+* Valores mínimos e máximos
+* Formatos inesperados
+* Campos opcionais ausentes
+
+#### c) Tratamento de Erros
+
+* Pelo menos **1 teste** garantindo:
+
+  * tipo correto da exceção
+  * contrato do erro respeitado
+
+### 7.2 Proporção esperada
+
+* Função simples/utilitária: **1–2 testes**
+* Função com ramificações/validação: **3–5 testes**
+* Funções críticas: testar conforme o risco, sem limite quantitativo
+
+### 7.3 Cobertura de Código
+
+* Cobertura mínima global: **90%**
+* Alvo recomendado: **90–100%**
+* PRs **não podem reduzir** cobertura existente
+
+Cobertura é medida via `coverage.py` ou `pytest‑cov`.
+
+### 7.4 Organização dos testes
+
+* Um arquivo de teste por arquivo de código
+* Arquivos > **500 linhas** devem ser divididos por funcionalidade
+
+### 7.5 Boas práticas de teste
+
+* Um conceito validado por teste
+* Testes independentes
+* Testes determinísticos (sem dependência de tempo, rede ou estado global)
 
 ---
 
-## 11. Regra Final
+## 8. Ferramentas de Qualidade
 
-> **Se o código só funciona quando tudo dá certo, ele está errado.**
+### 8.1 Obrigatórias (gate de CI)
 
-O repositório `pyloto_corp` deve funcionar corretamente **inclusive quando alguém tenta quebrá-lo de propósito**.
+* `ruff` — lint e estilo
+* `pytest` — execução de testes
+* `pytest‑cov` / `coverage.py` — cobertura
 
-Estas regras existem para garantir isso.
+Código que falha nessas ferramentas **não é válido**.
+
+### 8.2 Recomendadas (obrigatórias em auditoria)
+
+* `radon` — complexidade ciclomática
+* `xenon` — gates de complexidade
 
 ---
+
+## 9. Monitoramento de Conformidade
+
+O arquivo `Monitoramento_Regras‑Padroes.md` é a **fonte operacional** de acompanhamento e deve conter:
+
+* Violações conscientes existentes
+* Métricas atuais (tamanho, complexidade, cobertura)
+* Data e commit da última auditoria
+
+Atualização obrigatória quando:
+
+* uma exceção for introduzida
+* uma métrica regredir
+* auditoria for realizada
+
+---
+
+## 10. Definition of Done (Critério Final de Aceite)
+
+Um código só é considerado **pronto** quando:
+
+* Cumpre todos os limites estruturais
+* Passa em lint, testes e cobertura mínima
+* Possui testes cobrindo happy path, bordas e erros
+* Não introduz PII em logs
+* Não degrada métricas existentes
+
+Código fora deste padrão **não deve ser mergeado sob nenhuma hipótese**.
