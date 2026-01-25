@@ -56,6 +56,48 @@ def sanitize_text(text: str) -> str:
     return normalized
 
 
+def _build_conversation_message(
+    phone_e164: str,
+    pepper_secret: str,
+    provider_message_id: str,
+    direction: Literal["in", "out"],
+    actor: Literal["USER", "PYLOTO", "HUMAN"],
+    timestamp: datetime,
+    text: str,
+    correlation_id: str | None = None,
+    intent: str | None = None,
+    outcome: str | None = None,
+    tenant_id: str | None = None,
+    provider: Literal["whatsapp"] = "whatsapp",
+    payload_ref: str | None = None,
+) -> ConversationMessage:
+    """Constrói mensagem normalizada pronta para persistência.
+
+    Responsabilidades:
+    - Derivar user_key
+    - Sanitizar texto
+    - Criar instância de ConversationMessage
+    """
+
+    user_key = derive_user_key(phone_e164, pepper_secret)
+    sanitized_text = sanitize_text(text)
+
+    return ConversationMessage(
+        provider=provider,
+        provider_message_id=provider_message_id,
+        user_key=user_key,
+        tenant_id=tenant_id,
+        direction=direction,
+        actor=actor,
+        timestamp=timestamp,
+        text=sanitized_text,
+        correlation_id=correlation_id,
+        intent=intent,
+        outcome=outcome,
+        payload_ref=payload_ref,
+    )
+
+
 @dataclass(slots=True)
 class AppendMessageUseCase:
     """Caso de uso para append de mensagem no histórico."""
@@ -79,26 +121,21 @@ class AppendMessageUseCase:
         provider: Literal["whatsapp"] = "whatsapp",
         payload_ref: str | None = None,
     ) -> AppendResult:
-        """Aplica sanitização, deriva user_key e grava no store.
+        """Aplica sanitização, deriva user_key e grava no store."""
 
-        O pepper_secret deve vir do Secret Manager (em dev, pode ser env var).
-        """
-
-        user_key = derive_user_key(phone_e164, self.pepper_secret)
-        sanitized_text = sanitize_text(text)
-
-        message = ConversationMessage(
-            provider=provider,
+        message = _build_conversation_message(
+            phone_e164=phone_e164,
+            pepper_secret=self.pepper_secret,
             provider_message_id=provider_message_id,
-            user_key=user_key,
-            tenant_id=tenant_id,
             direction=direction,
             actor=actor,
             timestamp=timestamp,
-            text=sanitized_text,
+            text=text,
             correlation_id=correlation_id,
             intent=intent,
             outcome=outcome,
+            tenant_id=tenant_id,
+            provider=provider,
             payload_ref=payload_ref,
         )
 
@@ -108,7 +145,7 @@ class AppendMessageUseCase:
             "Conversation message appended",
             extra={
                 "correlation_id": correlation_id,
-                "user_key": user_key,
+                "user_key": message.user_key,
                 "provider_message_id": provider_message_id,
                 "direction": direction,
                 "message_created": result.created,
