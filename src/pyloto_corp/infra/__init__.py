@@ -4,11 +4,12 @@ Este módulo exporta as factories principais para criação de
 componentes de infraestrutura:
 
 - Dedupe: InMemoryDedupeStore, RedisDedupeStore
+- Session: InMemorySessionStore, RedisSessionStore, FirestoreSessionStore
 - Secrets: EnvSecretProvider, SecretManagerProvider
 - HTTP: HttpClient
 
 Uso típico:
-    from pyloto_corp.infra import create_dedupe_store, create_http_client
+    from pyloto_corp.infra import create_dedupe_store, create_session_store
 
 Conforme regras_e_padroes.md:
 - Infraestrutura não decide regra de negócio
@@ -37,6 +38,13 @@ from pyloto_corp.infra.secrets import (
     get_pepper_secret,
     get_whatsapp_secrets,
 )
+from pyloto_corp.infra.session_store import (
+    FirestoreSessionStore,
+    InMemorySessionStore,
+    RedisSessionStore,
+    SessionStore,
+    SessionStoreError,
+)
 
 __all__ = [
     # Dedupe
@@ -45,6 +53,12 @@ __all__ = [
     "InMemoryDedupeStore",
     "RedisDedupeStore",
     "create_dedupe_store",
+    # Session
+    "SessionStore",
+    "SessionStoreError",
+    "InMemorySessionStore",
+    "RedisSessionStore",
+    "FirestoreSessionStore",
     # HTTP
     "HttpClient",
     "HttpClientConfig",
