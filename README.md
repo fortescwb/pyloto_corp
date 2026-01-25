@@ -68,3 +68,8 @@ uvicorn pyloto_corp.api.app:app --reload --port 8080
 ## Licença e Contribuição
 
 Projeto **privado e proprietário**. Contribuições externas não são aceitas. Código mantido por equipe interna sob políticas de confidencialidade da Pyloto.
+
+## Status atual do projeto
+
+90% concluído
+informação atualizada em 25 de janeiro de 2026 às 14:35

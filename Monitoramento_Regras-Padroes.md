@@ -1,6 +1,6 @@
 # Esse documento existe para monitorar arquivos mencionados em Relatórios de Auditoria
 
-> **Última atualização:** 24/01/2026 - Auditoria de validação pós-refatoração.
+> **Última atualização:** 25/01/2026 14:30 - Auditoria de correção estrutural — Prioridade Crítica e Alta implementadas.
 
 ## Possíveis status
 
@@ -8,6 +8,40 @@
   -Alerta
   -Violação Crítica
 **ESSE ARQUIVO DEVE SER MANTIDO SEMPRE ATUALIZADO**
+
+---
+
+## 🆕 Novos Arquivos Criados (25/01/2026)
+
+### src/pyloto_corp/infra/session_store.py
+
+- **Status:** ✅ NOVO
+- **Responsabilidade:** Persistência de SessionState (Redis/Firestore)
+- **Implementações:**
+  - `InMemorySessionStore` — dev/testes
+  - `RedisSessionStore` — produção (Upstash)
+  - `FirestoreSessionStore` — produção (GCP Firestore)
+- **Funcionalidades:**
+  - TTL configurável (padrão: 2h para AWAITING_USER)
+  - Isolamento por session_id
+  - Zero vazamento de contexto entre sessões
+  - **Resolução:** Achado CRÍTICO #3 (persistência de sessão)
+
+### src/pyloto_corp/domain/abuse_detection.py
+
+- **Status:** ✅ NOVO
+- **Responsabilidade:** Detecção de flood, spam e abuso
+- **Implementações:**
+  - `FloodDetector` abstrato + `InMemoryFloodDetector`, `RedisFloodDetector`
+  - `SpamDetector` — heurística simples de conteúdo
+  - `AbuseChecker` — padrões de abuso em sessão
+- **Funcionalidades:**
+  - Detecção de flood (N mensagens em M segundos)
+  - Detecção de spam (repetição excessiva de caracteres)
+  - Marcação de sessão como `DUPLICATE_OR_SPAM` quando aplicável
+  - **Resolução:** Achado ALTA #4 (detecção de flood/spam)
+
+---
 
 ## ✅ Arquivos CORRIGIDOS (anteriormente ALERTA)
 
@@ -118,7 +152,22 @@
 
 ---
 
-## 📊 Resumo das Correções
+## 📊 Resumo das Correções Executadas (25/01/2026)
+
+### Correcções da Auditoria Técnica (25/01)
+
+| Achado Auditoria | Tipo | Solução | Status |
+|------------------|------|---------|--------|
+| Persistência de sessão não implementada | 🔴 CRÍTICO | Novo módulo `session_store.py` + Redis/Firestore | ✅ |
+| Orquestrador de IA é mock (hardcoded) | 🔴 CRÍTICO | Implementação real `AIOrchestrator` com `IntentClassifier` + `OutcomeDecider` | ✅ |
+| Pipeline com TODOs críticos | 🔴 CRÍTICO | Refatoração completa `WhatsAppInboundPipeline` com 9 etapas integradas | ✅ |
+| Limite de intenções não enforçado | 🟠 ALTO | Métodos adicionados a `IntentQueue`: `is_at_capacity()`, `total_intents()` | ✅ |
+| Ausência de detecção de flood/spam | 🟠 ALTO | Novo módulo `abuse_detection.py` (FloodDetector, SpamDetector, AbuseChecker) | ✅ |
+| Métodos com >50 linhas | 🟡 MÉDIO | Refatoração de `conversations.py` (extract helper) | ✅ |
+| Violações PEP 8 (>79 chars) | 🟡 MÉDIO | Reformatação de `firestore_conversations.py` | ✅ |
+| Critério de contagem de linhas não definido | 🟡 MÉDIO | Seção adicionada a `regras_e_padroes.md` com exemplo | ✅ |
+
+### Resumo das Correções
 
 | Módulo | Antes | Depois | Ação |
 |--------|-------|--------|------|
