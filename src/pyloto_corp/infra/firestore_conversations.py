@@ -24,14 +24,18 @@ class FirestoreConversationStore(ConversationStore):
     O tenant_id, quando existir, fica no documento do header.
     """
 
-    def __init__(self, client: firestore.Client, collection: str = "conversations") -> None:
+    def __init__(
+        self, client: firestore.Client, collection: str = "conversations"
+    ) -> None:
         self._client = client
         self._collection = collection
 
     def _header_ref(self, user_key: str) -> firestore.DocumentReference:
         return self._client.collection(self._collection).document(user_key)
 
-    def _message_ref(self, user_key: str, provider_message_id: str) -> firestore.DocumentReference:
+    def _message_ref(
+        self, user_key: str, provider_message_id: str
+    ) -> firestore.DocumentReference:
         return (
             self._client.collection(self._collection)
             .document(user_key)
@@ -41,7 +45,9 @@ class FirestoreConversationStore(ConversationStore):
 
     def append_message(self, message: ConversationMessage) -> AppendResult:
         header_ref = self._header_ref(message.user_key)
-        message_ref = self._message_ref(message.user_key, message.provider_message_id)
+        message_ref = self._message_ref(
+            message.user_key, message.provider_message_id
+        )
         now = datetime.now(tz=UTC)
 
         @firestore.transactional
@@ -55,7 +61,9 @@ class FirestoreConversationStore(ConversationStore):
             header_snapshot = header_ref.get(transaction=transaction)
             if header_snapshot.exists:
                 data = header_snapshot.to_dict() or {}
-                last_message_at = data.get("last_message_at", message.timestamp)
+                last_message_at = data.get(
+                    "last_message_at", message.timestamp
+                )
                 if isinstance(last_message_at, datetime):
                     last_message_at = max(last_message_at, message.timestamp)
                 else:
@@ -86,7 +94,9 @@ class FirestoreConversationStore(ConversationStore):
         except AlreadyExists:
             return AppendResult(created=False)
 
-    def get_messages(self, user_key: str, limit: int, cursor: str | None = None) -> Page:
+    def get_messages(
+        self, user_key: str, limit: int, cursor: str | None = None
+    ) -> Page:
         messages_ref = (
             self._client.collection(self._collection)
             .document(user_key)
@@ -103,7 +113,9 @@ class FirestoreConversationStore(ConversationStore):
                 query = query.start_after(cursor_snapshot)
 
         docs = list(query.stream())
-        items = [ConversationMessage(**(doc.to_dict() or {})) for doc in docs]
+        items = [
+            ConversationMessage(**(doc.to_dict() or {})) for doc in docs
+        ]
         next_cursor = docs[-1].id if len(docs) == limit else None
 
         return Page(items=items, next_cursor=next_cursor)
