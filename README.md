@@ -2,22 +2,12 @@
 
 Atendimento inicial institucional/comercial da Pyloto via WhatsApp (API oficial da Meta). Este serviço **não é CRM** e **não executa operação final** — ele explica a Pyloto, identifica intenção, coleta dados mínimos, qualifica o lead e encerra com 1 outcome terminal canônico.
 
-## Sobre Detalhes de Versão da Graph API
+## Arquivos Fonte de Verdade
 
-A URL base da API da Meta (Graph API) mais atual em
-janeiro de 2026 é:
-`https://graph.facebook.com`
-
-Para o envio de mensagens via WhatsApp Cloud API, a estrutura do endpoint utiliza o ID do seu número de telefone da seguinte forma:
-
-`https://graph.facebook.com{phone-number-id}/messages`
-
-Detalhes Importantes:
-
-    Versão Atual: A versão v24.0 foi lançada em 8 de outubro de 2025 e é a versão estável mais recente disponível no início de 2026.
-    Protocolo: Todas as chamadas devem ser feitas obrigatoriamente via HTTPS.
-
-Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeiramente para `https://graph-video.facebook.com`.
+-`pyloto_corp/README.md`
+-`pyloto_corp/regras_e_padroes.md`
+-`pyloto_corp/Funcionamento.md`
+-`pyloto_corp/Monitoramento_Regras-Padroes.md`
 
 ## Status atual
 
@@ -68,12 +58,14 @@ Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeir
 Configuração completa em [.env.exemplo](.env.exemplo). Principais:
 
 **WhatsApp/Meta API:**
+
 - `WHATSAPP_VERIFY_TOKEN` — Token de verificação do webhook
 - `WHATSAPP_WEBHOOK_SECRET` — HMAC SHA-256 para validação
 - `WHATSAPP_ACCESS_TOKEN` — Bearer token (usar Secret Manager em prod)
 - `WHATSAPP_PHONE_NUMBER_ID` — ID do número registrado
 
 **Infraestrutura:**
+
 - `ENVIRONMENT` — development | staging | production
 - `DEDUPE_BACKEND` — memory | redis
 - `REDIS_URL` — URL de conexão Redis (se dedupe_backend=redis)
@@ -82,6 +74,7 @@ Configuração completa em [.env.exemplo](.env.exemplo). Principais:
 - `GCS_BUCKET_EXPORT` — Bucket para exportações
 
 **Segurança:**
+
 - `ZERO_TRUST_MODE` — Validar assinatura sempre (default: true)
 - `PEPPER_SECRET` — Para derivar user_key via HMAC
 

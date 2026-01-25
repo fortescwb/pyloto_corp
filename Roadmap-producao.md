@@ -15,6 +15,7 @@ As seções abaixo destacam a coerência atual do código com as definições do
 **Status:** Código implementado, provisionamento GCP pendente
 
 **Concluído:**
+
 - ✅ `config/settings.py` — Graph API v24.0, constantes, collections, buckets, validação
 - ✅ `infra/secrets.py` — SecretManagerProvider completo com factory
 - ✅ `infra/dedupe.py` — RedisDedupeStore com fail-closed e TTL
@@ -25,6 +26,7 @@ As seções abaixo destacam a coerência atual do código com as definições do
 - ✅ 155 testes unitários passando
 
 **Pendente:**
+
 - ☐ Provisionamento de projeto GCP
 - ☐ Firestore, Cloud Storage, Redis/Memorystore
 - ☐ Secrets no Secret Manager
