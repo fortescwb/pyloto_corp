@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pyloto_corp.infra.session_contract import SessionStore, SessionStoreError
 from pyloto_corp.observability.logging import get_logger
@@ -17,7 +17,7 @@ logger: logging.Logger = get_logger(__name__)
 class RedisSessionStore(SessionStore):
     """Armazenamento em Redis (Upstash) para produção."""
 
-    def __init__(self, redis_client: object) -> None:
+    def __init__(self, redis_client: Any) -> None:
         self._redis = redis_client
 
     def save(self, session: SessionState, ttl_seconds: int = 7200) -> None:

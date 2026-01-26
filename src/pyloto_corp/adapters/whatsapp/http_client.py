@@ -152,7 +152,7 @@ class WhatsAppHttpClient(HttpClient):
         """Envia mensagem via WhatsApp API."""
         url, headers = self._build_request(endpoint, access_token)
         response = await self._execute_send(url, payload, headers, endpoint)
-        return self._process_response(response, endpoint)
+        return self._process_whatsapp_response(response, endpoint)
 
     def _build_request(self, endpoint: str, access_token: str) -> tuple[str, dict[str, str]]:
         """Monta URL e headers seguros para envio."""
@@ -175,7 +175,7 @@ class WhatsAppHttpClient(HttpClient):
             logger.error("Erro inesperado ao enviar WhatsApp", extra={"endpoint": endpoint})
             raise HttpError(f"Erro inesperado: {type(e).__name__}") from e
 
-    def _process_response(
+    def _process_whatsapp_response(
         self,
         response: httpx.Response,
         endpoint: str,

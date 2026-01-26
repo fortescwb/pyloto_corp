@@ -93,9 +93,8 @@ class WhatsAppOutboundClient:
         if isinstance(payload_result, OutboundMessageResponse):
             return payload_result
 
-        # 3. Enviar via HTTP
-        import asyncio
-        return asyncio.run(self._send_real(request))
+        # 3. Enviar (mock por enquanto)
+        return self._send_mock(request)
 
     def _validate_request(
         self,
@@ -133,68 +132,6 @@ class WhatsAppOutboundClient:
                 error_code="PAYLOAD_BUILD_ERROR",
                 error_message=str(exc),
             )
-
-    async def _send_real(
-        self,
-        request: OutboundMessageRequest,
-    ) -> OutboundMessageResponse:
-        """Envia mensagem via WhatsApp HTTP API."""
-
-        from pyloto_corp.adapters.whatsapp.http_client import WhatsAppHttpClient
-        from pyloto_corp.config.settings import get_settings
-        
-        settings = get_settings()
-        
-        # Construir payload
-        payload_result = self._build_payload_safe(request)
-        if isinstance(payload_result, OutboundMessageResponse):
-            return payload_result
-        
-        payload = payload_result
-        
-        # Construir endpoint para envio
-        phone_id = settings.whatsapp_phone_number_id
-        api_version = settings.whatsapp_api_version
-        base_url = settings.whatsapp_api_base_url
-        endpoint = f"{base_url}/{api_version}/{phone_id}/messages"
-        
-        try:
-            http_client = WhatsAppHttpClient()
-            response = await http_client.send_message(
-                endpoint=endpoint,
-                access_token=settings.whatsapp_access_token,
-                payload=payload,
-            )
-            
-            message_id = response.get("messages", [{}])[0].get("id", "unknown")
-            logger.info(
-                "message_sent_to_whatsapp_api",
-                extra={
-                    "message_id": message_id,
-                    "request_id": request.idempotency_key,
-                },
-            )
-            
-            return OutboundMessageResponse(
-                success=True,
-                message_id=message_id,
-            )
-            
-        except Exception as e:
-            logger.error(
-                "whatsapp_send_failed",
-                extra={
-                    "error": str(e),
-                    "request_id": request.idempotency_key,
-                },
-            )
-            return OutboundMessageResponse(
-                success=False,
-                error_code="WHATSAPP_API_ERROR",
-                error_message=str(e),
-            )
-
-
 
     def _send_mock(
         self,

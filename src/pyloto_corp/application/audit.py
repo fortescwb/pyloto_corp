@@ -41,19 +41,32 @@ class RecordAuditEventUseCase:
             latest = self.store.get_latest_event(user_key)
             prev_hash = latest.hash if latest else None
 
-            event_data = {
-                "event_id": str(uuid.uuid4()),
-                "user_key": user_key,
-                "tenant_id": tenant_id,
-                "timestamp": datetime.now(tz=UTC),
-                "actor": actor,
-                "action": action,
-                "reason": reason,
-                "prev_hash": prev_hash,
-                "correlation_id": correlation_id,
-            }
-            event_hash = compute_event_hash(event_data, prev_hash)
-            event = AuditEvent(**event_data, hash=event_hash)
+            event_hash_value = compute_event_hash(
+                {
+                    "event_id": str(uuid.uuid4()),
+                    "user_key": user_key,
+                    "tenant_id": tenant_id,
+                    "timestamp": datetime.now(tz=UTC),
+                    "actor": actor,
+                    "action": action,
+                    "reason": reason,
+                    "prev_hash": prev_hash,
+                    "correlation_id": correlation_id,
+                },
+                prev_hash,
+            )
+            event = AuditEvent(
+                event_id=str(uuid.uuid4()),
+                user_key=user_key,
+                tenant_id=tenant_id,
+                timestamp=datetime.now(tz=UTC),
+                actor=actor,
+                action=action,
+                reason=reason,
+                prev_hash=prev_hash,
+                correlation_id=correlation_id,
+                hash=event_hash_value,
+            )
 
             success = self.store.append_event(event, expected_prev_hash=prev_hash)
             if success:

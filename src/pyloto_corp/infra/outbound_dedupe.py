@@ -20,7 +20,6 @@ from pyloto_corp.domain.outbound_dedup import (  # noqa: F401
 )
 from pyloto_corp.infra.outbound_dedup_factory import (  # noqa: F401
     create_outbound_dedupe_store,
-    generate_idempotency_key,
 )
 from pyloto_corp.infra.outbound_dedup_firestore import FirestoreOutboundDedupeStore  # noqa: F401
 from pyloto_corp.infra.outbound_dedup_memory import InMemoryOutboundDedupeStore  # noqa: F401
@@ -46,7 +45,6 @@ __all__ = [
     "RedisOutboundDedupeStore",
     "FirestoreOutboundDedupeStore",
     "create_outbound_dedupe_store",
-    "generate_idempotency_key",
     "hash_message_content",
     "DEFAULT_TTL_SECONDS",
 ]

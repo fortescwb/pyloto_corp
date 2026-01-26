@@ -92,7 +92,10 @@ class ExportConversationUseCase:
         tenant_id: str | None,
     ) -> AuditEvent:
         """Registra evento de export na auditoria e retorna o evento."""
-        actor_normalized = "SYSTEM" if requester_actor.upper() == "SYSTEM" else "HUMAN"
+        from pyloto_corp.domain.audit import AuditActor
+        actor_normalized: AuditActor = (
+            "SYSTEM" if requester_actor.upper() == "SYSTEM" else "HUMAN"
+        )
         export_event = self.audit_recorder.execute(
             user_key=user_key,
             action="EXPORT_GENERATED",

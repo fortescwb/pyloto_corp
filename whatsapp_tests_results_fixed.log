@@ -1,0 +1,51 @@
+============================================
+Testes de Envio WhatsApp API v24.0 (CORRIGIDO)
+Recipient: +5541988991078
+Endpoint: https://graph.facebook.com/v24.0/957912434071464/messages
+Timestamp: seg 26 jan 2026 14:16:02 -03
+============================================
+
+Iniciando testes...
+
+[TEST] TEXT: Envio de texto simples
+  ✅ Sucesso (HTTP 200)
+
+[TEST] IMAGE: Envio de imagem via URL
+  ✅ Sucesso (HTTP 200)
+
+[TEST] DOCUMENT: Envio de documento PDF
+  ✅ Sucesso (HTTP 200)
+
+[TEST] AUDIO: Envio de áudio MP3
+  ✅ Sucesso (HTTP 200)
+
+[TEST] VIDEO: Envio de vídeo MP4
+  ✅ Sucesso (HTTP 200)
+
+[TEST] LOCATION: Envio de localização (GPS)
+  ✅ Sucesso (HTTP 200)
+
+[TEST] CONTACTS: Envio de contato vCard
+  ✅ Sucesso (HTTP 200)
+
+[TEST] INTERACTIVE_BUTTONS: Envio de botões interativos
+  ✅ Sucesso (HTTP 200)
+
+[TEST] INTERACTIVE_LIST: Envio de menu com lista
+  ✅ Sucesso (HTTP 200)
+
+[TEST] TEMPLATE: Envio de template pré-aprovado (hello_world)
+  ✅ Sucesso (HTTP 200)
+
+[TEST] REACTION: Envio de reação emoji
+  ❌ Erro (HTTP 400)
+  Response: {"error":{"message":"(#131009) Parameter value is not valid","type":"OAuthException","code":131009,"error_data":{"messaging_product":"whatsapp","details":"Invalid message_id"},"fbtrace_id":"A8WLKHcsWdjLQ1ByAEsw-C-"}}
+
+[TEST] STICKER: Envio de adesivo WEBP
+  ✅ Sucesso (HTTP 200)
+
+
+============================================
+Testes Finalizados em: seg 26 jan 2026 14:16:27 -03
+Log salvo em: /tmp/whatsapp_tests_results_fixed.log
+============================================

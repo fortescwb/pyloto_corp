@@ -92,6 +92,12 @@ class Settings(BaseSettings):
     pubsub_topic_handoff: str = "handoff-human"
     pubsub_topic_audit: str = "audit-events"
 
+    # OpenAI / IA
+    openai_api_key: str | None = None  # Chave da API OpenAI (Secret Manager)
+    openai_model: str = "gpt-4o-mini"  # Modelo padrão (otimizado para latência)
+    openai_timeout_seconds: int = 10  # Timeout para chamadas OpenAI
+    openai_max_retries: int = 2  # Retries em falha
+
     # Observabilidade
     log_format: str = "json"  # json | text
     correlation_id_header: str = "X-Correlation-ID"
