@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,7 +14,6 @@ from pyloto_corp.application.services.dedup_service import (
     hash_message_content,
 )
 from pyloto_corp.domain.outbound_dedup import (
-    DedupeResult,
     OutboundDedupeError,
     OutboundDedupeStore,
 )
@@ -169,6 +168,7 @@ class TestInMemoryOutboundDedupeStore:
         assert in_memory_store.is_sent("key_123") is False
 
         in_memory_store.check_and_mark("key_123", "msg_abc")
+        in_memory_store.mark_sent("key_123", "msg_abc")
 
         assert in_memory_store.is_sent("key_123") is True
 
@@ -249,6 +249,13 @@ class TestRedisOutboundDedupeStore:
     def test_is_sent_uses_exists(self, mock_redis: MagicMock) -> None:
         """is_sent deve usar EXISTS do Redis."""
         mock_redis.exists.return_value = True
+        mock_redis.get.return_value = json.dumps(
+            {
+                "status": "sent",
+                "message_id": "msg_abc",
+                "timestamp": datetime.now(tz=UTC).isoformat(),
+            }
+        )
 
         store = RedisOutboundDedupeStore(mock_redis)
         result = store.is_sent("key_123")

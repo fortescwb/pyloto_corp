@@ -22,6 +22,8 @@ class DedupeResult:
     is_duplicate: bool
     original_message_id: str | None = None
     original_timestamp: datetime | None = None
+    status: str | None = None  # pending | sent | failed
+    error: str | None = None
 
 
 class OutboundDedupeError(Exception):
@@ -82,6 +84,37 @@ class OutboundDedupeStore(ABC):
 
         Raises:
             OutboundDedupeError: Em modo fail-closed
+        """
+        ...
+
+    @abstractmethod
+    def mark_failed(
+        self,
+        idempotency_key: str,
+        error: str | None = None,
+        ttl_seconds: int | None = None,
+    ) -> bool:
+        """Marca envio como falhado (persistente).
+
+        Args:
+            idempotency_key: Chave de idempotência
+            error: Mensagem de erro para auditoria
+            ttl_seconds: TTL para expiração
+
+        Returns:
+            True se marcado, False se já havia status anterior
+
+        Raises:
+            OutboundDedupeError: Em modo fail-closed
+        """
+        ...
+
+    @abstractmethod
+    def get_status(self, idempotency_key: str) -> str | None:
+        """Obtém status atual do envio (pending/sent/failed).
+
+        Returns:
+            Status string ou None se inexistente/expirado
         """
         ...
 

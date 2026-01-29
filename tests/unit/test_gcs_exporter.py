@@ -3,19 +3,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pyloto_corp.infra.gcs_exporter import (
-    DEFAULT_RETENTION_DAYS,
-    DEFAULT_SIGNED_URL_EXPIRATION_DAYS,
     ExportMetadata,
     GCSHistoryExporter,
     create_gcs_exporter,
 )
-
 
 # ============================================================
 # Fixtures
@@ -355,7 +351,8 @@ class TestCleanupOldExports:
 
         # Simular documentos antigos no Firestore
         mock_doc = MagicMock()
-        mock_firestore.collection.return_value.where.return_value.limit.return_value.stream.return_value = [
+        (mock_firestore.collection.return_value.where.return_value
+         .limit.return_value.stream.return_value) = [
             mock_doc
         ]
 

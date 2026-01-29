@@ -1,0 +1,78 @@
+# A1 — Inventário de Imports infra.dedupe
+
+## Arquivos que importam de infra.dedupe (7 encontrados):
+
+### 1. src/pyloto_corp/api/app.py
+   - Imports: InMemoryDedupeStore, RedisDedupeStore (DIRETO de dedupe.py)
+   - Uso: create_dedupe_store(settings) para inicializar app.state.dedupe_store
+   - Nota: DEVE passar para factory dedupe_factory.create_dedupe_store() (não existe ainda)
+
+### 2. src/pyloto_corp/api/dependencies.py
+   - Imports: DedupeStore (DIRETO de dedupe.py, via TYPE_CHECKING)
+   - Uso: Anotação de tipo para get_dedupe_store(request) -> DedupeStore
+   - Nota: Pode importar de dedupe_contract.py (novo) ou manter compatibilidade
+
+### 3. src/pyloto_corp/api/routes.py
+   - Imports: DedupeStore (DIRETO de dedupe.py)
+   - Uso: Anotação de tipo em whatsapp_webhook(..., dedupe_store: DedupeStore)
+   - Nota: Mesmo que dependencies.py
+
+### 4. src/pyloto_corp/application/pipeline.py
+   - Imports: DedupeStore (em TYPE_CHECKING)
+   - Uso: WhatsAppInboundPipeline.__init__(dedupe_store: DedupeStore)
+   - Nota: Mesmo que routes.py
+
+### 5. src/pyloto_corp/application/pipeline_v2.py
+   - Imports: DedupeStore (em TYPE_CHECKING)
+   - Uso: PipelineV2.__init__(dedupe_store: DedupeStore)
+   - Nota: Mesmo que pipeline.py
+
+### 6. src/pyloto_corp/infra/__init__.py (EXPORT)
+   - Exports: DedupeStore, InMemoryDedupeStore, RedisDedupeStore, DedupeError, create_dedupe_store
+   - Uso: Public API da camada infra
+   - Nota: CRÍTICO — manter compatibilidade ou criar aliases
+
+### 7. (POTENCIAL) Testes (não encontrado mas pode existir)
+   - Seria em tests/**/*dedupe*
+   - Verificar se há
+
+## Módulos que JÁ EXISTEM relacionados:
+
+### Inbound Dedupe (processamento de mensagens):
+- infra/dedupe.py (361 linhas) — ATUAL (monolítico)
+- FUTURE: infra/dedupe_contract.py (protocol)
+- FUTURE: infra/dedupe_memory.py (InMemoryDedupeStore)
+- FUTURE: infra/dedupe_redis.py (RedisDedupeStore)
+- FUTURE: infra/dedupe_factory.py (factory) [OPCIONAL — pode ficar em dedupe.py]
+
+### Outbound Dedupe (envio de mensagens):
+- domain/outbound_dedup.py (protocol)
+- infra/outbound_dedup_memory.py
+- infra/outbound_dedup_redis.py
+- infra/outbound_dedup_firestore.py
+- infra/outbound_dedup_factory.py
+- infra/outbound_dedupe.py (SHIM de compatibilidade)
+
+## Decisão Recomendada:
+
+Option A: REFATORAR INBOUND COMO OUTBOUND
+- Criar dedupe_memory.py, dedupe_redis.py, dedupe_factory.py
+- Manter dedupe.py como SHIM (compatibilidade)
+- Atualizar infra/__init__.py para importar do shim
+- VANTAGEM: Paralelo com outbound, modular
+- RISCO: Mais arquivos
+
+Option B: MANTER DEDUPE.PY + MELHORAR EXPORTS
+- Deixar dedupe.py como está (361 linhas é aceitável)
+- Melhorar infra/__init__.py para re-exportar mais claramente
+- Mover apenas factory para arquivo separado se crescer
+- VANTAGEM: Menos mudanças, risco menor
+- RISCO: Fica monolítico
+
+## RECOMENDAÇÃO: OPTION B (conservador)
+Pq: Não há quebra de contrato, dedupe.py já é bem estruturado internamente,
+os 361 linhas estão distribuídos entre 2 classes + factory.
+Risco de refatoração não justificado vs. benefício.
+
+## AÇÃO: Apenas criar DEDUPE_FACTORY e documentar bem
+

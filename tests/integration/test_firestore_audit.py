@@ -12,9 +12,8 @@ Valida:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 from google.cloud import firestore
 
 from pyloto_corp.domain.audit import (
@@ -257,23 +256,22 @@ class TestFirestoreAuditLogStoreAppendEvent:
             store,
             "_audit_collection",
             return_value=mock_collection_ref,
+        ), patch(
+            "google.cloud.firestore.transactional",
+            side_effect=transactional_decorator,
         ):
-            with patch(
-                "google.cloud.firestore.transactional",
-                side_effect=transactional_decorator,
-            ):
-                # Transaction.set não lança erro
-                transaction.set = MagicMock()
+            # Transaction.set não lança erro
+            transaction.set = MagicMock()
 
-                # Chamar append (vai invocar a transação)
-                # Nota: isso é simplificado; em testes reais, usar emulador
-                try:
-                    result = store.append_event(event, expected_prev_hash=None)
-                    # Se passou sem erro, consideramos sucesso
-                    assert True
-                except Exception:
-                    # Aceitável em mock
-                    pass
+            # Chamar append (vai invocar a transação)
+            # Nota: isso é simplificado; em testes reais, usar emulador
+            try:
+                store.append_event(event, expected_prev_hash=None)
+                # Se passou sem erro, consideramos sucesso
+                assert True
+            except Exception:
+                # Aceitável em mock
+                pass
 
     def test_append_event_chain_mismatch(self) -> None:
         """Append falha se prev_hash não corresponde (race condition)."""
@@ -319,16 +317,15 @@ class TestFirestoreAuditLogStoreAppendEvent:
             store,
             "_audit_collection",
             return_value=mock_collection_ref,
+        ), patch(
+            "google.cloud.firestore.transactional",
+            side_effect=transactional_decorator,
         ):
-            with patch(
-                "google.cloud.firestore.transactional",
-                side_effect=transactional_decorator,
-            ):
-                # Chamar append com prev_hash errado
-                result = store.append_event(event, expected_prev_hash="hash1")
+            # Chamar append com prev_hash errado
+            result = store.append_event(event, expected_prev_hash="hash1")
 
-                # Deve retornar False (conflito)
-                assert result is False
+            # Deve retornar False (conflito)
+            assert result is False
 
 
 class TestFirestoreAuditLogStoreChainIntegrity:

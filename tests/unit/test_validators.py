@@ -10,15 +10,17 @@ Cobertura:
 
 from __future__ import annotations
 
+from contextlib import suppress
+
 import pytest
 
 from pyloto_corp.adapters.whatsapp.models import OutboundMessageRequest
 from pyloto_corp.adapters.whatsapp.validators.errors import ValidationError
+from pyloto_corp.adapters.whatsapp.validators.media import validate_media_message
 from pyloto_corp.adapters.whatsapp.validators.orchestrator import (
     WhatsAppMessageValidator,
 )
 from pyloto_corp.adapters.whatsapp.validators.text import validate_text_message
-from pyloto_corp.adapters.whatsapp.validators.media import validate_media_message
 from pyloto_corp.domain.enums import MessageType
 
 
@@ -321,11 +323,8 @@ class TestValidatorEdgeCases:
 
         # Comportamento: valida como texto normal (null é caractere)
         # Não deve lançar exceção (Meta API trata)
-        try:
+        with suppress(ValidationError):
             validate_text_message(request)
-        except ValidationError:
-            # OK se rejeitado, mas não deve crashear
-            pass
 
     def test_recipient_with_plus_sign(self) -> None:
         """Número com '+' prefixo é válido."""
@@ -359,3 +358,450 @@ class TestValidatorEdgeCases:
 
         # Deve não lançar exceção
         validate_media_message(request, MessageType.IMAGE)
+
+
+class TestInteractiveMessageValidator:
+    """Testes para validação de mensagens interativas."""
+
+    def test_valid_button_interactive_message(self) -> None:
+        """Mensagem interativa de botões válida passa."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text="Escolha uma opção:",
+            buttons=[
+                {"id": "btn_1", "title": "Opção 1"},
+                {"id": "btn_2", "title": "Opção 2"},
+            ],
+        )
+
+        # Deve não lançar exceção
+        validate_interactive_message(request)
+
+    def test_interactive_missing_type_raises_error(self) -> None:
+        """Tipo interativo ausente lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type=None,
+            text="Texto",
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "interactive_type is required" in str(exc_info.value)
+
+    def test_interactive_invalid_type_raises_error(self) -> None:
+        """Tipo interativo inválido lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="invalid_type",
+            text="Texto",
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "Invalid interactive_type" in str(exc_info.value)
+
+    def test_interactive_missing_body_raises_error(self) -> None:
+        """Corpo (text) ausente em mensagem interativa lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text=None,
+            buttons=[{"id": "btn_1", "title": "Op"}],
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "text (body) is required" in str(exc_info.value)
+
+    def test_interactive_body_exceeds_max_length_raises_error(self) -> None:
+        """Corpo acima do limite lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text="x" * 4097,  # Acima de 4096
+            buttons=[{"id": "btn_1", "title": "Op"}],
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "exceeds maximum length" in str(exc_info.value)
+
+    def test_button_type_missing_buttons_raises_error(self) -> None:
+        """Tipo BUTTON sem botões lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text="Escolha:",
+            buttons=None,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "buttons is required" in str(exc_info.value)
+
+    def test_button_type_exceeds_max_buttons_raises_error(self) -> None:
+        """Excesso de botões lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        # Max é 3 botões por mensagem
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text="Escolha:",
+            buttons=[
+                {"id": f"btn_{i}", "title": f"Op {i}"}
+                for i in range(5)
+            ],
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "Maximum" in str(exc_info.value) and "buttons" in str(exc_info.value)
+
+    def test_button_missing_id_raises_error(self) -> None:
+        """Botão sem ID lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text="Escolha:",
+            buttons=[
+                {"title": "Op 1"},  # Falta 'id'
+            ],
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "must have 'id' and 'title'" in str(exc_info.value)
+
+    def test_button_title_exceeds_limit_raises_error(self) -> None:
+        """Título do botão acima do limite lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="button",
+            text="Escolha:",
+            buttons=[
+                {"id": "btn_1", "title": "x" * 256},  # Max é 20 chars
+            ],
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "title exceeds" in str(exc_info.value)
+
+    def test_list_type_requires_sections(self) -> None:
+        """Tipo LIST sem seções lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="list",
+            text="Escolha:",
+            buttons=[],  # Vazio
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "At least one list section required" in str(exc_info.value)
+
+    def test_flow_type_valid(self) -> None:
+        """Tipo FLOW válido passa."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="flow",
+            text="Inicie o fluxo:",
+            flow_id="flow_123",
+            flow_message_version="3",
+            flow_token="token_abc",
+            flow_cta="Iniciar",
+            flow_action="NAVIGATE",
+        )
+
+        validate_interactive_message(request)
+
+    def test_flow_type_missing_field_raises_error(self) -> None:
+        """Tipo FLOW sem campo obrigatório lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="flow",
+            text="Inicie:",
+            flow_id="flow_123",
+            flow_message_version=None,  # Falta
+            flow_token="token_abc",
+            flow_cta="Iniciar",
+            flow_action="NAVIGATE",
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "required for FLOW" in str(exc_info.value)
+
+    def test_cta_url_type_valid(self) -> None:
+        """Tipo CTA_URL válido passa."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="cta_url",
+            text="Acesse:",
+            cta_url="https://example.com",
+            cta_display_text="Clique aqui",
+        )
+
+        validate_interactive_message(request)
+
+    def test_cta_url_type_missing_url_raises_error(self) -> None:
+        """Tipo CTA_URL sem URL lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="cta_url",
+            text="Acesse:",
+            cta_url=None,
+            cta_display_text="Clique",
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_interactive_message(request)
+        assert "cta_url is required" in str(exc_info.value)
+
+    def test_location_request_type_valid(self) -> None:
+        """Tipo LOCATION_REQUEST_MESSAGE válido passa."""
+        from pyloto_corp.adapters.whatsapp.validators.interactive import (
+            validate_interactive_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.INTERACTIVE.value,
+            interactive_type="location_request_message",
+            text="Envie sua localização",
+        )
+
+        validate_interactive_message(request)
+
+
+class TestTemplateMessageValidator:
+    """Testes para validação de templates e localização."""
+
+    def test_valid_template_message(self) -> None:
+        """Template válido passa."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_template_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.TEMPLATE.value,
+            template_name="hello_world",
+        )
+
+        validate_template_message(request)
+
+    def test_template_missing_name_raises_error(self) -> None:
+        """Template sem nome lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_template_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.TEMPLATE.value,
+            template_name=None,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_template_message(request)
+        assert "template_name is required" in str(exc_info.value)
+
+    def test_template_name_exceeds_limit_raises_error(self) -> None:
+        """Nome de template acima do limite lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_template_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.TEMPLATE.value,
+            template_name="x" * 513,  # Acima de 512
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_template_message(request)
+        assert "must not exceed" in str(exc_info.value)
+
+    def test_valid_location_message(self) -> None:
+        """Mensagem de localização válida passa."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_location_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.LOCATION.value,
+            location_latitude=-23.5505,
+            location_longitude=-46.6333,
+        )
+
+        validate_location_message(request)
+
+    def test_location_missing_coordinates_raises_error(self) -> None:
+        """Localização sem coordenadas lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_location_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.LOCATION.value,
+            location_latitude=None,
+            location_longitude=-46.6333,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_location_message(request)
+        assert "location_latitude and location_longitude are required" in str(exc_info.value)
+
+    def test_location_invalid_latitude_raises_error(self) -> None:
+        """Latitude inválida lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_location_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.LOCATION.value,
+            location_latitude=91.0,  # Acima de 90
+            location_longitude=-46.6333,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_location_message(request)
+        assert "location_latitude must be between -90 and 90" in str(exc_info.value)
+
+    def test_location_invalid_longitude_raises_error(self) -> None:
+        """Longitude inválida lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_location_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.LOCATION.value,
+            location_latitude=-23.5505,
+            location_longitude=181.0,  # Acima de 180
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_location_message(request)
+        assert "location_longitude must be between -180 and 180" in str(exc_info.value)
+
+    def test_location_boundary_values_pass(self) -> None:
+        """Valores limites de coordenadas passam."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_location_message,
+        )
+
+        # Testando limites
+        for lat, lon in [(-90, -180), (90, 180), (0, 0)]:
+            request = OutboundMessageRequest(
+                to="5511999999999",
+                message_type=MessageType.LOCATION.value,
+                location_latitude=lat,
+                location_longitude=lon,
+            )
+            validate_location_message(request)
+
+    def test_valid_address_message(self) -> None:
+        """Mensagem de endereço válida passa."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_address_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.ADDRESS.value,
+            address_street="Rua A",
+            address_city="São Paulo",
+        )
+
+        validate_address_message(request)
+
+    def test_address_missing_all_fields_raises_error(self) -> None:
+        """Endereço sem campos lança erro."""
+        from pyloto_corp.adapters.whatsapp.validators.template import (
+            validate_address_message,
+        )
+
+        request = OutboundMessageRequest(
+            to="5511999999999",
+            message_type=MessageType.ADDRESS.value,
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_address_message(request)
+        assert "At least one address field is required" in str(exc_info.value)

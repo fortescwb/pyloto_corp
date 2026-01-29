@@ -1,5 +1,7 @@
 """Pipeline v2: Integração de 3 LLM points com ordem garantida.
 
+TODO: mover para ._legado após consolidação Cloud Tasks; fora do fluxo oficial.
+
 Fluxo:
 1. Validação e dedupe
 2. Detecção de abuso (flood/spam)
@@ -28,6 +30,7 @@ from pyloto_corp.adapters.whatsapp.models import WebhookProcessingSummary
 from pyloto_corp.adapters.whatsapp.normalizer import extract_messages
 from pyloto_corp.ai.assistant_message_type import choose_message_plan
 from pyloto_corp.ai.openai_client import get_openai_client
+from pyloto_corp.ai.sanitizer import mask_pii_in_history
 from pyloto_corp.application.session import SessionState
 from pyloto_corp.config.settings import get_settings
 from pyloto_corp.domain.abuse_detection import (
@@ -46,6 +49,29 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 settings = get_settings()
 
+def _run_async_in_thread(coro):
+    """Executa coroutine em uma thread separada com seu próprio event loop.
+    
+    Isso evita o erro 'asyncio.run() cannot be called from a running event loop'
+    quando chamado de dentro de um contexto async (FastAPI).
+    """
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    
+    def run_in_new_loop():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
+    
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(run_in_new_loop)
+        return future.result(timeout=30)
+
+
+
 
 class PipelineV2:
     """Pipeline v2 com 3 LLM points integrados."""
@@ -63,8 +89,15 @@ class PipelineV2:
         self._max_intents = max_intent_limit
         self._spam = SpamDetector()
         self._abuse = AbuseChecker(max_intents_exceeded=max_intent_limit)
-        self._openai_client = (
-            get_openai_client() if settings.openai_enabled else None
+        self._openai_client = get_openai_client() if settings.openai_enabled else None
+
+    def _get_outbound_client(self):
+        """Cria cliente WhatsApp outbound com settings."""
+        from pyloto_corp.adapters.whatsapp.outbound import WhatsAppOutboundClient
+        return WhatsAppOutboundClient(
+            api_endpoint=settings.whatsapp_api_endpoint,
+            access_token=settings.whatsapp_access_token or "",
+            phone_number_id=settings.whatsapp_phone_number_id or "",
         )
 
     def process_webhook(self, payload: dict[str, Any]) -> WebhookProcessingSummary:
@@ -90,7 +123,7 @@ class PipelineV2:
 
     def _dedupe_check(self, msg: Any) -> bool:
         """Retorna True se foi deduplicado."""
-        if self._dedupe.check_and_mark(msg.message_id):
+        if not self._dedupe.mark_if_new(msg.message_id):
             logger.debug("msg_deduplicated", extra={"msg_id": msg.message_id[:8]})
             return True
         return False
@@ -114,6 +147,21 @@ class PipelineV2:
             logger.info("openai_disabled: using fallback")
             return self._process_with_fallback(msg, session)
 
+        try:
+            return self._process_with_llm(msg, session, fsm_state, fsm_next_state)
+        except (TimeoutError, ValueError, RuntimeError) as e:
+            logger.warning("llm_pipeline_error", extra={"error": type(e).__name__})
+            return self._process_with_fallback(msg, session)
+        except Exception as e:
+            logger.error("llm_pipeline_unexpected_error", extra={"error": str(e)})
+            session.outcome = Outcome.FAILED_INTERNAL
+            self._sessions.save(session)
+            return False
+
+    def _process_with_llm(
+        self, msg: Any, session: Any, fsm_state: str, fsm_next_state: str
+    ) -> bool:
+        """Processa mensagem via pipeline LLM (extração de _process_message)."""
         llm1_result = self._run_llm1_event_detection(msg, session)
         logger.debug(
             "llm1_event_detected",
@@ -138,9 +186,7 @@ class PipelineV2:
         )
 
         # 6. LLM #3: Select message type (APÓS LLM #2)
-        msg_plan = self._run_llm3_message_selection(
-            fsm_state, llm1_result.event.value, llm2_result
-        )
+        msg_plan = self._run_llm3_message_selection(fsm_state, llm1_result.event.value, llm2_result)
         logger.debug(
             "llm3_message_type_selected",
             extra={
@@ -167,23 +213,24 @@ class PipelineV2:
             extra={"msg_type": msg_plan.kind, "payload": sanitized},
         )
 
-        # 10. Send (simulado aqui; integrado com adapter)
         # 10. Send via WhatsApp HTTP
         from pyloto_corp.adapters.whatsapp.models import OutboundMessageRequest
-        from pyloto_corp.adapters.whatsapp.outbound import WhatsAppOutboundClient
-        
-        outbound_client = WhatsAppOutboundClient()
+
+        outbound_client = self._get_outbound_client()
         recipient_phone = msg.from_number  # número do remetente
-        
+        # Ensure E.164 format (add + prefix if missing)
+        if recipient_phone and not recipient_phone.startswith("+"):
+            recipient_phone = f"+{recipient_phone}"
+
         outbound_request = OutboundMessageRequest(
             to=recipient_phone,
-            message_type=msg_plan.kind,
+            message_type=msg_plan.kind.lower(),
             text=llm2_result.text_content,
-            buttons=msg_plan.buttons if hasattr(msg_plan, 'buttons') else None,
+            buttons=msg_plan.buttons if hasattr(msg_plan, "buttons") else None,
             category="MARKETING",
             idempotency_key=msg.message_id,
         )
-        
+
         send_result = outbound_client.send_message(outbound_request)
         if not send_result.success:
             logger.error(
@@ -199,24 +246,17 @@ class PipelineV2:
             extra={"whatsapp_message_id": send_result.message_id},
         )
 
-
         # 11. Persist session + outcome
-        session.outcome = Outcome.MESSAGE_SENT
+        session.outcome = Outcome.AWAITING_USER
         self._sessions.save(session)
 
         return True
 
-    async def _run_llm3_message_selection_async(
-        self, state: str, event: str, llm2_result
-    ):
+    async def _run_llm3_message_selection_async(self, state: str, event: str, llm2_result):
         """Wrapper async para LLM #3."""
-        return await choose_message_plan(
-            self._openai_client, state, event, llm2_result
-        )
+        return await choose_message_plan(self._openai_client, state, event, llm2_result)
 
-    def _run_llm3_message_selection(
-        self, state: str, event: str, llm2_result
-    ) -> Any:
+    def _run_llm3_message_selection(self, state: str, event: str, llm2_result) -> Any:
         """Seleção de tipo de mensagem (LLM #3)."""
         try:
             # Para manter síncrono no pipeline, usar fallback ou async runner
@@ -246,13 +286,11 @@ class PipelineV2:
     def _run_llm1_event_detection(self, msg: Any, session: SessionState) -> Any:
         """LLM #1: Detect event."""
         user_input = msg.text or ""
-        import asyncio
-
         try:
-            result = asyncio.run(
+            result = _run_async_in_thread(
                 self._openai_client.detect_event(
                     user_input=user_input,
-                    session_history=session.message_history,
+                    session_history=mask_pii_in_history(session.message_history),
                 )
             )
             return result
@@ -267,10 +305,8 @@ class PipelineV2:
     ) -> Any:
         """LLM #2: Generate response."""
         user_input = msg.text or ""
-        import asyncio
-
         try:
-            result = asyncio.run(
+            result = _run_async_in_thread(
                 self._openai_client.generate_response(
                     user_input=user_input,
                     detected_intent=llm1_result.detected_intent,
@@ -293,10 +329,14 @@ class PipelineV2:
                 build_text_payload,
             )
 
-            to = msg.chat_id or msg.sender_phone
+            to = getattr(msg, "from_number", None) or getattr(msg, "sender_phone", None)
             if not to:
                 logger.error("missing_phone_for_payload")
                 return None
+
+            # Ensure E.164 format (add + prefix if missing)
+            if not to.startswith("+"):
+                to = f"+{to}"
 
             if msg_plan.kind == "INTERACTIVE_BUTTON":
                 return build_interactive_buttons_payload(
@@ -349,4 +389,3 @@ class PipelineV2:
         session = SessionState(session_id=new_session_id())
         logger.info("session_created", extra={"sid": session.session_id[:8]})
         return session
-

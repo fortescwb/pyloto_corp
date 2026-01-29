@@ -172,7 +172,7 @@ class InteractiveButtonMessage(BaseModel):
     """Mensagem interativa com botões de resposta rápida."""
 
     body: str = Field(..., min_length=1, max_length=1024)
-    buttons: list[ButtonReply] = Field(..., min_items=1, max_items=3)
+    buttons: list[ButtonReply] = Field(..., min_length=1, max_length=3)
     footer: str | None = Field(None, max_length=60)
 
 
@@ -181,7 +181,7 @@ class InteractiveListMessage(BaseModel):
 
     body: str = Field(..., min_length=1, max_length=1024)
     button: str = Field(..., max_length=20)  # Texto do botão "Ver opções"
-    sections: list[dict[str, Any]] = Field(..., min_items=1, max_items=10)
+    sections: list[dict[str, Any]] = Field(..., min_length=1, max_length=10)
     footer: str | None = Field(None, max_length=60)
 
 

@@ -12,14 +12,12 @@ Valida:
 from __future__ import annotations
 
 import json
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
 from pyloto_corp.adapters.whatsapp.http_client import (
-    WhatsAppApiError,
     WhatsAppHttpClient,
     _is_permanent_error,
     _parse_meta_error,

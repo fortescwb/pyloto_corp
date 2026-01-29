@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from pyloto_corp.application.session import SessionState
-from pyloto_corp.domain.models import LeadProfile
+from pyloto_corp.domain.enums import Outcome
 from pyloto_corp.domain.intent_queue import IntentQueue
-from pyloto_corp.infra.session_store_firestore import FirestoreSessionStore, _parse_expire_at
+from pyloto_corp.domain.models import LeadProfile
 from pyloto_corp.infra.session_contract import SessionStoreError
+from pyloto_corp.infra.session_store_firestore import FirestoreSessionStore, _parse_expire_at
 
 
 class TestParseExpireAt:
@@ -57,6 +58,7 @@ class TestFirestoreSessionStoreSave:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_save_session_success(self):
@@ -130,7 +132,7 @@ class TestFirestoreSessionStoreLoad:
                 "items": [],
                 "active_index": None,
             },
-            "outcome": None,
+            "outcome": Outcome.AWAITING_USER.value,
             "_ttl_expire_at": datetime.now(tz=UTC) + timedelta(hours=1),
         }
 
@@ -315,6 +317,7 @@ class TestFirestoreSessionStoreIntegration:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_save_load_cycle(self):

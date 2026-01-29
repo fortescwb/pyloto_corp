@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pyloto_corp.ai.openai_client import OpenAIClientManager
 from pyloto_corp.ai.contracts.response_generation import ResponseGenerationResult
+from pyloto_corp.ai.openai_client import OpenAIClientManager
+from pyloto_corp.ai.sanitizer import sanitize_response_content
 from pyloto_corp.observability.logging import get_logger
 
 logger = get_logger(__name__)
@@ -73,10 +74,13 @@ def build_message_type_input(
             "stickers": False,
         }
 
+    # Sanitizar conteúdo antes de enviar para LLM #3 (defesa em profundidade)
+    sanitized_text = sanitize_response_content(generated_response.text_content)
+
     context = {
         "state": state,
         "event": event,
-        "text_content": generated_response.text_content,
+        "text_content": sanitized_text,
         "options_count": len(generated_response.options or []),
         "requires_human_review": str(generated_response.requires_human_review),
         "channel_capabilities": str(channel_caps),
@@ -126,9 +130,7 @@ async def choose_message_plan(
     )
 
     # Converter resultado LLM #3 para MessagePlan
-    return _build_message_plan_from_llm_result(
-        message_type_result, generated_response, safety
-    )
+    return _build_message_plan_from_llm_result(message_type_result, generated_response, safety)
 
 
 def _build_message_plan_from_llm_result(

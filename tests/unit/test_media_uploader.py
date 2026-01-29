@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -283,7 +283,8 @@ class TestMediaUploaderUpload:
         sample_image_content: bytes,
     ) -> None:
         """Falha no GCS lança MediaUploaderError."""
-        mock_gcs_client.bucket.return_value.blob.return_value.upload_from_string.side_effect = Exception(
+        (mock_gcs_client.bucket.return_value.blob.return_value
+            .upload_from_string.side_effect) = Exception(
             "GCS error"
         )
 

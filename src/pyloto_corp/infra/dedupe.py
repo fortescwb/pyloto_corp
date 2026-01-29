@@ -5,7 +5,7 @@ mensagens duplicadas não sejam processadas mais de uma vez.
 
 Conforme TODO_01 e regras_e_padroes.md:
 - Redis é o backend recomendado para produção
-- TTL configurável (padrão: 24h)
+- TTL configurável (padrão: 7 dias)
 - Fail-closed: em caso de erro, NÃO processa (segurança)
 - InMemoryDedupeStore apenas para dev/testes
 
@@ -32,21 +32,21 @@ class DedupeStore(ABC):
     """Contrato abstrato para stores de deduplicação.
 
     Implementações devem garantir:
-    - Atomicidade de check_and_mark
+    - Atomicidade de marcação set-if-not-exists
     - Respeito ao TTL configurado
     - Comportamento fail-closed em produção
     """
 
     @abstractmethod
-    def check_and_mark(self, key: str) -> bool:
-        """Verifica se chave já foi processada e marca se não foi.
+    def mark_if_new(self, key: str) -> bool:
+        """Marca chave se não existir (set-if-not-exists).
 
         Args:
             key: Chave única da mensagem (ex: message_id ou hash)
 
         Returns:
-            True se a chave JÁ FOI processada (duplicada)
-            False se a chave é NOVA (deve ser processada)
+            True se a chave foi marcada agora (evento novo)
+            False se a chave já existia (duplicado)
 
         Raises:
             DedupeError: Em caso de falha no backend (fail-closed)
@@ -103,10 +103,10 @@ class InMemoryDedupeStore(DedupeStore):
     """
 
     _seen: dict[str, float] = field(default_factory=dict)
-    ttl_seconds: int = 86400  # 24 horas
+    ttl_seconds: int = 604800  # 7 dias
 
-    def check_and_mark(self, key: str) -> bool:
-        """Verifica e marca chave com timestamp."""
+    def mark_if_new(self, key: str) -> bool:
+        """Marca chave se não existir; retorna True se evento é novo."""
         self._cleanup_expired()
 
         if key in self._seen:
@@ -114,14 +114,14 @@ class InMemoryDedupeStore(DedupeStore):
                 "Dedupe hit (in-memory)",
                 extra={"key": key[:16] + "...", "is_duplicate": True},
             )
-            return True
+            return False
 
         self._seen[key] = time.time()
         logger.debug(
             "Dedupe miss (in-memory)",
             extra={"key": key[:16] + "...", "is_duplicate": False},
         )
-        return False
+        return True
 
     def is_duplicate(self, key: str) -> bool:
         """Verifica sem marcar."""
@@ -157,7 +157,7 @@ class RedisDedupeStore(DedupeStore):
     def __init__(
         self,
         redis_url: str,
-        ttl_seconds: int = 86400,
+        ttl_seconds: int = 604800,
         fail_closed: bool = True,
         key_prefix: str = "dedupe:",
     ) -> None:
@@ -215,20 +215,18 @@ class RedisDedupeStore(DedupeStore):
         """Adiciona prefixo à chave."""
         return f"{self._key_prefix}{key}"
 
-    def check_and_mark(self, key: str) -> bool:
-        """Usa SETNX com TTL para check atômico."""
+    def mark_if_new(self, key: str) -> bool:
+        """Usa SETNX com TTL para marcar evento novo."""
         client = self._get_client()
 
         if client is None:
             # Fallback silencioso (fail_closed=False)
             logger.warning("Redis indisponível, ignorando dedupe")
-            return False
+            return True
 
         redis_key = self._make_key(key)
 
         try:
-            # SETNX retorna True se a chave foi criada (nova)
-            # False se já existia (duplicada)
             was_set = client.set(
                 redis_key,
                 "1",
@@ -236,27 +234,27 @@ class RedisDedupeStore(DedupeStore):
                 ex=self._ttl_seconds,
             )
 
-            is_duplicate = not was_set
+            is_new = bool(was_set)
 
             logger.debug(
                 "Dedupe check (Redis)",
                 extra={
                     "key": key[:16] + "...",
-                    "is_duplicate": is_duplicate,
+                    "is_duplicate": not is_new,
                     "ttl": self._ttl_seconds,
                 },
             )
 
-            return is_duplicate
+            return is_new
 
         except Exception as e:
             logger.error(
                 "Erro em operação Redis",
-                extra={"operation": "check_and_mark", "error_type": type(e).__name__},
+                extra={"operation": "mark_if_new", "error_type": type(e).__name__},
             )
             if self._fail_closed:
                 raise DedupeError(f"Falha ao verificar dedupe: {e}") from e
-            return False
+            return True
 
     def is_duplicate(self, key: str) -> bool:
         """Verifica existência sem modificar."""
@@ -304,6 +302,7 @@ def create_dedupe_store(settings: Settings | None = None) -> DedupeStore:
     Usa settings.dedupe_backend para determinar implementação:
     - "memory": InMemoryDedupeStore (dev/testes)
     - "redis": RedisDedupeStore (produção)
+    - "firestore": FirestoreDedupeStore (produção alternativa)
 
     Args:
         settings: Configurações da aplicação. Se None, usa get_settings()
@@ -327,6 +326,9 @@ def create_dedupe_store(settings: Settings | None = None) -> DedupeStore:
     if backend == "redis":
         return _create_redis_store(settings)
 
+    if backend == "firestore":
+        return _create_firestore_store(settings)
+
     raise ValueError(f"Backend de dedupe não reconhecido: {backend}")
 
 
@@ -344,7 +346,7 @@ def _create_redis_store(settings: Settings) -> DedupeStore:
     if not settings.redis_url:
         raise ValueError("REDIS_URL é obrigatório quando dedupe_backend=redis")
 
-    fail_closed = settings.is_production
+    fail_closed = settings.is_production or settings.is_staging
 
     logger.info(
         "Usando RedisDedupeStore",
@@ -355,6 +357,30 @@ def _create_redis_store(settings: Settings) -> DedupeStore:
     )
     return RedisDedupeStore(
         redis_url=settings.redis_url,
+        ttl_seconds=settings.dedupe_ttl_seconds,
+        fail_closed=fail_closed,
+    )
+
+
+def _create_firestore_store(settings: Settings) -> DedupeStore:
+    """Cria store Firestore com TTL."""
+    project_id = settings.firestore_project_id or settings.gcp_project
+    if not project_id:
+        raise ValueError("FIRESTORE_PROJECT_ID ou GCP_PROJECT é obrigatório para dedupe_firestore")
+
+    from google.cloud import firestore
+
+    from pyloto_corp.infra.dedupe_firestore import FirestoreDedupeStore
+
+    client = firestore.Client(project=project_id)
+    fail_closed = settings.is_production or settings.is_staging
+
+    logger.info(
+        "Usando FirestoreDedupeStore",
+        extra={"ttl_seconds": settings.dedupe_ttl_seconds, "project_id": project_id},
+    )
+    return FirestoreDedupeStore(
+        client=client,
         ttl_seconds=settings.dedupe_ttl_seconds,
         fail_closed=fail_closed,
     )

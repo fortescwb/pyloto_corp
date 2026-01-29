@@ -51,6 +51,8 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
         doc_ref: Any,
         message_id: str,
         expire_at: datetime,
+        status: str,
+        error: str | None = None,
     ) -> None:
         """Cria/atualiza entrada de dedupe."""
         now = datetime.now(tz=UTC)
@@ -58,6 +60,8 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
             "message_id": message_id,
             "timestamp": now,
             "_ttl_expire_at": expire_at,
+            "status": status,
+            "error": error,
         })
 
     def _handle_existing(
@@ -77,9 +81,11 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
                 is_duplicate=True,
                 original_message_id=data.get("message_id"),
                 original_timestamp=data.get("timestamp"),
+                status=data.get("status"),
+                error=data.get("error"),
             )
 
-        self._create_entry(doc_ref, message_id, expire_at)
+        self._create_entry(doc_ref, message_id, expire_at, status="pending")
         logger.debug(
             "Outbound dedup miss (expired, Firestore)",
             extra={"key_prefix": "..."},
@@ -105,7 +111,7 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
                     doc.to_dict(), doc_ref, message_id, expire_at
                 )
 
-            self._create_entry(doc_ref, message_id, expire_at)
+            self._create_entry(doc_ref, message_id, expire_at, status="pending")
             logger.debug(
                 "Outbound dedup miss (Firestore)",
                 extra={"key_prefix": idempotency_key[:8] + "..."},
@@ -130,7 +136,9 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
 
             data = doc.to_dict()
             ttl_expire = data.get("_ttl_expire_at")
-            return not (ttl_expire and datetime.now(tz=UTC) > ttl_expire)
+            if ttl_expire and datetime.now(tz=UTC) > ttl_expire:
+                return False
+            return data.get("status") == "sent"
 
         except Exception as e:
             logger.error(
@@ -157,19 +165,68 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
             if doc.exists:
                 data = doc.to_dict()
                 ttl_expire = data.get("_ttl_expire_at")
-                if ttl_expire and now <= ttl_expire:
+                if ttl_expire and now <= ttl_expire and data.get("status") == "sent":
                     return False  # Já existe e não expirou
 
-            doc_ref.set({
-                "message_id": message_id,
-                "timestamp": now,
-                "_ttl_expire_at": expire_at,
-            })
+            self._create_entry(
+                doc_ref,
+                message_id=message_id,
+                expire_at=expire_at,
+                status="sent",
+                error=None,
+            )
             return True
 
         except Exception as e:
             logger.error(
                 "Firestore outbound dedup mark failed (fail-closed)",
+                extra={"error": str(e)},
+            )
+            raise OutboundDedupeError(f"Firestore unavailable: {e}") from e
+
+    def mark_failed(
+        self,
+        idempotency_key: str,
+        error: str | None = None,
+        ttl_seconds: int | None = None,
+    ) -> bool:
+        """Marca envio como falho (fail-closed)."""
+        ttl = ttl_seconds or self.DEFAULT_TTL_SECONDS
+        doc_ref = self._client.collection(self._collection).document(idempotency_key)
+        expire_at = datetime.now(tz=UTC) + timedelta(seconds=ttl)
+
+        try:
+            self._create_entry(
+                doc_ref,
+                message_id=idempotency_key,
+                expire_at=expire_at,
+                status="failed",
+                error=error,
+            )
+            return True
+        except Exception as e:
+            logger.error(
+                "Firestore outbound dedup mark failed (fail-closed)",
+                extra={"error": str(e)},
+            )
+            raise OutboundDedupeError(f"Firestore unavailable: {e}") from e
+
+    def get_status(self, idempotency_key: str) -> str | None:
+        """Retorna status atual ou None se expirado."""
+        doc_ref = self._client.collection(self._collection).document(idempotency_key)
+
+        try:
+            doc = doc_ref.get()
+            if not doc.exists:
+                return None
+            data = doc.to_dict()
+            ttl_expire = data.get("_ttl_expire_at")
+            if ttl_expire and datetime.now(tz=UTC) > ttl_expire:
+                return None
+            return data.get("status")
+        except Exception as e:
+            logger.error(
+                "Firestore outbound dedup status failed (fail-closed)",
                 extra={"error": str(e)},
             )
             raise OutboundDedupeError(f"Firestore unavailable: {e}") from e

@@ -6,7 +6,6 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
-from google.api_core.exceptions import AlreadyExists
 from google.cloud import firestore
 
 from pyloto_corp.domain.conversations import (
@@ -117,7 +116,7 @@ class TestAppendMessage:
         self, store, mock_firestore_client
     ):
         """Testa que append de mensagem duplicada retorna created=False."""
-        msg = create_test_message()
+        create_test_message()
         mock_transaction = MagicMock(spec=firestore.Transaction)
         mock_firestore_client.transaction.return_value = mock_transaction
         
@@ -152,7 +151,7 @@ class TestGetMessages:
         messages_ref = MagicMock()
         
         # Mock da query
-        query = MagicMock()
+        MagicMock()
         ordered_query = MagicMock()
         limited_query = MagicMock()
         
@@ -224,7 +223,7 @@ class TestGetMessages:
         messages_collection.document.return_value = messages_ref
         messages_ref.collection.return_value = messages_collection
         
-        query = MagicMock()
+        MagicMock()
         ordered_query = MagicMock()
         limited_query = MagicMock()
         after_query = MagicMock()
@@ -233,7 +232,7 @@ class TestGetMessages:
         ordered_query.limit.return_value = limited_query
         
         # Mock cursor ref
-        cursor_ref = MagicMock()
+        MagicMock()
         cursor_snapshot = MagicMock()
         cursor_snapshot.exists = True
         messages_collection.document(cursor).get.return_value = (
@@ -280,7 +279,7 @@ class TestGetMessages:
         messages_collection.document.return_value = messages_ref
         messages_ref.collection.return_value = messages_collection
         
-        query = MagicMock()
+        MagicMock()
         ordered_query = MagicMock()
         limited_query = MagicMock()
         
@@ -362,7 +361,7 @@ class TestMessageOrdering:
         messages_collection.document.return_value = messages_ref
         messages_ref.collection.return_value = messages_collection
         
-        query = MagicMock()
+        MagicMock()
         ordered_query = MagicMock()
         limited_query = MagicMock()
         

@@ -9,6 +9,7 @@ SessionState é a unidade atômica de interação com um cliente.
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -33,3 +34,7 @@ class SessionState(BaseModel):
     lead_profile: LeadProfile = Field(default_factory=LeadProfile)
     intent_queue: IntentQueue = Field(default_factory=IntentQueue)
     outcome: Outcome | None = None
+
+    # Campos adicionados para suporte ao pipeline v2 (FSM + LLM)
+    current_state: str = "INIT"
+    message_history: list[dict[str, Any]] = Field(default_factory=list)

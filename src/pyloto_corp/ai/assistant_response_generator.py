@@ -15,6 +15,7 @@ from pyloto_corp.ai.contracts.response_generation import (
     ResponseGenerationResult,
     ResponseOption,
 )
+from pyloto_corp.ai.sanitizer import sanitize_response_content
 from pyloto_corp.domain.enums import Intent
 from pyloto_corp.domain.session.states import SessionState
 from pyloto_corp.observability.logging import get_logger
@@ -28,9 +29,7 @@ class ResponseGenerator:
     def __init__(self) -> None:
         pass
 
-    async def generate(
-        self, request: ResponseGenerationRequest
-    ) -> ResponseGenerationResult:
+    async def generate(self, request: ResponseGenerationRequest) -> ResponseGenerationResult:
         """Gera resposta a partir do evento + estado + contexto.
 
         Args:
@@ -101,8 +100,7 @@ class ResponseGenerator:
                 "Qual delas te interessa?"
             ),
             Intent.ENTRY_UNKNOWN: (
-                "Olá! Bem-vindo à Pyloto. "
-                "Para melhor atendê-lo, poderia detalhar sua necessidade?"
+                "Olá! Bem-vindo à Pyloto. Para melhor atendê-lo, poderia detalhar sua necessidade?"
             ),
         }
 
@@ -133,8 +131,11 @@ class ResponseGenerator:
                 ),
             ]
 
+        # Sanitizar conteúdo antes de retornar (defesa em profundidade)
+        sanitized_text = sanitize_response_content(text)
+
         return ResponseGenerationResult(
-            text_content=text,
+            text_content=sanitized_text,
             options=options,
             suggested_next_state=request.next_state,
             requires_human_review=False,

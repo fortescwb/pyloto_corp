@@ -8,8 +8,9 @@ from datetime import UTC, datetime
 import pytest
 
 from pyloto_corp.application.session import SessionState
-from pyloto_corp.domain.models import LeadProfile
+from pyloto_corp.domain.enums import Outcome
 from pyloto_corp.domain.intent_queue import IntentQueue
+from pyloto_corp.domain.models import LeadProfile
 from pyloto_corp.infra.session_store_memory import InMemorySessionStore
 
 
@@ -22,6 +23,7 @@ class TestInMemorySessionStoreSave:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_save_session_success(self):
@@ -43,7 +45,6 @@ class TestInMemorySessionStoreSave:
 
         store.save(session, ttl_seconds=60)
 
-        after_save = datetime.now(tz=UTC).timestamp()
         _, expire_at = store._sessions["test-session-123"]
 
         # A expiração deve estar entre 60 e 61 segundos no futuro
@@ -78,6 +79,34 @@ class TestInMemorySessionStoreSave:
         assert saved_session == session2
 
 
+    def test_save_session_without_outcome_sets_failed_internal(self):
+        """Sessões sem outcome devem ser normalizadas para FAILED_INTERNAL."""
+        store = InMemorySessionStore()
+        session = SessionState(
+            session_id="no-outcome",
+            lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
+            intent_queue=IntentQueue(),
+            outcome=None,
+        )
+
+        store.save(session, ttl_seconds=3600)
+
+        saved_session, _ = store._sessions["no-outcome"]
+        assert saved_session.outcome == Outcome.FAILED_INTERNAL
+
+    @pytest.mark.parametrize("outcome", list(Outcome))
+    def test_save_accepts_all_terminal_outcomes(self, outcome):
+        """Todos os outcomes canônicos devem ser persistidos sem alteração."""
+        store = InMemorySessionStore()
+        session = self._create_mock_session(session_id=f"session-{outcome}")
+        session.outcome = outcome
+
+        store.save(session)
+
+        saved_session, _ = store._sessions[f"session-{outcome}"]
+        assert saved_session.outcome == outcome
+
+
 class TestInMemorySessionStoreLoad:
     """Testes para método load."""
 
@@ -87,6 +116,7 @@ class TestInMemorySessionStoreLoad:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_load_session_success(self):
@@ -162,6 +192,7 @@ class TestInMemorySessionStoreDelete:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_delete_session_success(self):
@@ -201,6 +232,7 @@ class TestInMemorySessionStoreExists:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_exists_true_for_valid_session(self):
@@ -256,6 +288,7 @@ class TestInMemorySessionStoreIntegration:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_save_load_delete_cycle(self):

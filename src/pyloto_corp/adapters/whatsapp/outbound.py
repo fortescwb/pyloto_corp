@@ -9,6 +9,7 @@ Responsabilidade:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from dataclasses import dataclass
@@ -71,11 +72,19 @@ class WhatsAppOutboundClient:
         self.phone_number_id = phone_number_id
         self.validator = WhatsAppMessageValidator()
 
-    def send_message(
+    def send_message_sync(self, request: OutboundMessageRequest) -> OutboundMessageResponse:
+        """Envia mensagem em contexto síncrono (apoio para testes/local)."""
+
+        async def _runner() -> OutboundMessageResponse:
+            return await self.send_message(request)
+
+        return asyncio.run(_runner())
+
+    async def send_message(
         self,
         request: OutboundMessageRequest,
     ) -> OutboundMessageResponse:
-        """Envia uma mensagem individual.
+        """Envia uma mensagem individual (async-first).
 
         Args:
             request: Requisição de envio
@@ -93,9 +102,8 @@ class WhatsAppOutboundClient:
         if isinstance(payload_result, OutboundMessageResponse):
             return payload_result
 
-        # 3. Enviar via HTTP
-        import asyncio
-        return asyncio.run(self._send_real(request))
+        # 3. Enviar via HTTP (async/await, padrão puro)
+        return await self._send_real(request)
 
     def _validate_request(
         self,
@@ -139,25 +147,24 @@ class WhatsAppOutboundClient:
         request: OutboundMessageRequest,
     ) -> OutboundMessageResponse:
         """Envia mensagem via WhatsApp HTTP API."""
-
         from pyloto_corp.adapters.whatsapp.http_client import WhatsAppHttpClient
         from pyloto_corp.config.settings import get_settings
-        
+
         settings = get_settings()
-        
+
         # Construir payload
         payload_result = self._build_payload_safe(request)
         if isinstance(payload_result, OutboundMessageResponse):
             return payload_result
-        
+
         payload = payload_result
-        
+
         # Construir endpoint para envio
         phone_id = settings.whatsapp_phone_number_id
         api_version = settings.whatsapp_api_version
         base_url = settings.whatsapp_api_base_url
         endpoint = f"{base_url}/{api_version}/{phone_id}/messages"
-        
+
         try:
             http_client = WhatsAppHttpClient()
             response = await http_client.send_message(
@@ -165,7 +172,7 @@ class WhatsAppOutboundClient:
                 access_token=settings.whatsapp_access_token,
                 payload=payload,
             )
-            
+
             message_id = response.get("messages", [{}])[0].get("id", "unknown")
             logger.info(
                 "message_sent_to_whatsapp_api",
@@ -174,12 +181,12 @@ class WhatsAppOutboundClient:
                     "request_id": request.idempotency_key,
                 },
             )
-            
+
             return OutboundMessageResponse(
                 success=True,
                 message_id=message_id,
             )
-            
+
         except Exception as e:
             logger.error(
                 "whatsapp_send_failed",
@@ -194,40 +201,15 @@ class WhatsAppOutboundClient:
                 error_message=str(e),
             )
 
-
-
-    def _send_mock(
-        self,
-        request: OutboundMessageRequest,
-    ) -> OutboundMessageResponse:
-        """Envia mensagem (mock). TODO: integrar com HTTP client."""
-        # Registrar apenas metadados não-PII
-        logger.info(
-            "Message sent (mock)",
-            extra={
-                "message_type": request.message_type,
-                "category": request.category,
-                "idempotency_key": request.idempotency_key,
-            },
-        )
-        return OutboundMessageResponse(
-            success=True,
-            message_id="mock_message_id",
-        )
-
     def send_batch(
         self,
         requests: list[OutboundMessageRequest],
     ) -> list[OutboundMessageResponse]:
-        """Envia lote de mensagens.
-
-        Args:
-            requests: Lista de requisições de envio
-
-        Returns:
-            Lista de respostas (uma por requisição, mesma ordem)
-        """
-        return [self.send_message(req) for req in requests]
+        """Envia lote de mensagens em modo síncrono (helper)."""
+        responses: list[OutboundMessageResponse] = []
+        for request in requests:
+            responses.append(self.send_message_sync(request))
+        return responses
 
     @staticmethod
     def generate_dedupe_key(

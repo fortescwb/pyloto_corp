@@ -16,6 +16,8 @@
   - `openai-api-key` (versão 2)
   - `openai-model` (gpt-4o-mini)
   - `openai-timeout-seconds` (10)
+  - `internal-task-token`
+  - `redis-url`
 
 ---
 
@@ -28,14 +30,69 @@ OPENAI_ENABLED=true
 OPENAI_API_KEY=[via Secret Manager: openai-api-key:latest]
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_TIMEOUT_SECONDS=10
-REDIS_URL=[via Secret Manager: redis-url:latest] (ou .env local)
+CLOUD_TASKS_ENABLED=true
+QUEUE_BACKEND=cloud_tasks
+GCP_PROJECT=atendimento-inicial-pyloto
+GCP_LOCATION=us-central1
+INTERNAL_TASK_BASE_URL=https://pyloto-inbound-api-staging-xxxxx.a.run.app
+INTERNAL_TASK_TOKEN=[via Secret Manager: internal-task-token:latest]
+INBOUND_TASK_QUEUE_NAME=whatsapp-inbound
+OUTBOUND_TASK_QUEUE_NAME=whatsapp-outbound
+DEDUPE_BACKEND=redis
+REDIS_URL=[via Secret Manager: redis-url:latest]
 LOG_LEVEL=INFO
 ENVIRONMENT=staging
 ```
 
 ---
 
-## 3. Build & Deploy (Cloud Run)
+## 3. Cloud Tasks Queues (create/update)
+
+Comandos idempotentes (create ou update) para garantir rate/concurrency e retries:
+
+```bash
+# INBOUND — alta vazão, concorrência alta (>=50)
+gcloud tasks queues create whatsapp-inbound \
+  --location=us-central1 \
+  --project=atendimento-inicial-pyloto \
+  --max-dispatches-per-second=50 \
+  --max-concurrent-dispatches=50 \
+  --max-attempts=10 \
+  --min-backoff=5s \
+  --max-backoff=600s || \
+gcloud tasks queues update whatsapp-inbound \
+  --location=us-central1 \
+  --project=atendimento-inicial-pyloto \
+  --max-dispatches-per-second=50 \
+  --max-concurrent-dispatches=50 \
+  --max-attempts=10 \
+  --min-backoff=5s \
+  --max-backoff=600s
+
+# OUTBOUND — mais restrita para evitar 429 na API Meta (5–20)
+gcloud tasks queues create whatsapp-outbound \
+  --location=us-central1 \
+  --project=atendimento-inicial-pyloto \
+  --max-dispatches-per-second=10 \
+  --max-concurrent-dispatches=10 \
+  --max-attempts=8 \
+  --min-backoff=5s \
+  --max-backoff=600s || \
+gcloud tasks queues update whatsapp-outbound \
+  --location=us-central1 \
+  --project=atendimento-inicial-pyloto \
+  --max-dispatches-per-second=10 \
+  --max-concurrent-dispatches=10 \
+  --max-attempts=8 \
+  --min-backoff=5s \
+  --max-backoff=600s
+```
+
+Nota: Outbound é propositalmente mais restrita para reduzir chance de 429/Rate Limit da API Meta.
+
+---
+
+## 4. Build & Deploy (Cloud Run)
 
 ### Opção 1: Usar Cloud Build (automatizado)
 
@@ -76,7 +133,7 @@ gcloud run deploy pyloto-inbound-api-staging \
 
 ---
 
-## 4. Validação Pós-Deploy
+## 5. Validação Pós-Deploy
 
 ### Health Check
 
@@ -131,7 +188,7 @@ gcloud run logs read pyloto-inbound-api-staging \
 
 ---
 
-## 5. Testes E2E Locais (Antes de Deploy)
+## 6. Testes E2E Locais (Antes de Deploy)
 
 ```bash
 # Instalar dependências (uma vez)
@@ -149,7 +206,7 @@ pytest --cov=src/pyloto_corp/ai --cov=src/pyloto_corp/application \
 
 ---
 
-## 6. Feature Flags (Gradual Rollout)
+## 7. Feature Flags (Gradual Rollout)
 
 ### Staging: Teste com OpenAI ativado
 
@@ -187,7 +244,7 @@ OPENAI_ENABLED=true
 
 ---
 
-## 7. Monitoramento em Produção
+## 8. Monitoramento em Produção
 
 ### Métricas Críticas
 
@@ -249,4 +306,3 @@ gcloud run services update-traffic pyloto-inbound-api-staging \
 **Canal:** #deployments Slack  
 **Runbook:** Este arquivo (DEPLOYMENT_STAGING.md)  
 **Rollback:** 5 min para fallback, 15 min para versão anterior
-

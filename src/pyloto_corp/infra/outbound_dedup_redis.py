@@ -56,6 +56,8 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
             value = json.dumps({
                 "message_id": message_id,
                 "timestamp": now.isoformat(),
+                "status": "pending",
+                "error": None,
             })
 
             # SETNX: set only if not exists, com EXPIRE
@@ -82,6 +84,8 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
                     is_duplicate=True,
                     original_message_id=data.get("message_id"),
                     original_timestamp=datetime.fromisoformat(data["timestamp"]),
+                    status=data.get("status"),
+                    error=data.get("error"),
                 )
 
             return DedupeResult(is_duplicate=True)
@@ -98,7 +102,15 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
         key = f"{self._prefix}{idempotency_key}"
 
         try:
-            return bool(self._redis.exists(key))
+            if not self._redis.exists(key):
+                return False
+            existing = self._redis.get(key)
+            if not existing:
+                return False
+            if isinstance(existing, bytes):
+                existing = existing.decode("utf-8")
+            data = json.loads(existing)
+            return data.get("status") == "sent"
         except Exception as e:
             logger.error(
                 "Redis outbound dedup check failed (fail-closed)",
@@ -121,14 +133,62 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
             value = json.dumps({
                 "message_id": message_id,
                 "timestamp": now.isoformat(),
+                "status": "sent",
+                "error": None,
             })
 
-            was_set = self._redis.set(key, value, nx=True, ex=ttl)
-            return bool(was_set)
+            # Atualiza sempre, preservando TTL
+            self._redis.set(key, value, ex=ttl)
+            return True
 
         except Exception as e:
             logger.error(
                 "Redis outbound dedup mark failed (fail-closed)",
+                extra={"error": str(e)},
+            )
+            raise OutboundDedupeError(f"Redis unavailable: {e}") from e
+
+    def mark_failed(
+        self,
+        idempotency_key: str,
+        error: str | None = None,
+        ttl_seconds: int | None = None,
+    ) -> bool:
+        """Marca envio como falho (fail-closed)."""
+        ttl = ttl_seconds or self.DEFAULT_TTL_SECONDS
+        key = f"{self._prefix}{idempotency_key}"
+
+        try:
+            now = datetime.now(tz=UTC)
+            value = json.dumps({
+                "message_id": idempotency_key,
+                "timestamp": now.isoformat(),
+                "status": "failed",
+                "error": error,
+            })
+            self._redis.set(key, value, ex=ttl)
+            return True
+        except Exception as e:
+            logger.error(
+                "Redis outbound dedup mark failed (fail-closed)",
+                extra={"error": str(e)},
+            )
+            raise OutboundDedupeError(f"Redis unavailable: {e}") from e
+
+    def get_status(self, idempotency_key: str) -> str | None:
+        """Retorna status armazenado ou None."""
+        key = f"{self._prefix}{idempotency_key}"
+        try:
+            existing = self._redis.get(key)
+            if not existing:
+                return None
+            if isinstance(existing, bytes):
+                existing = existing.decode("utf-8")
+            data = json.loads(existing)
+            return data.get("status")
+        except Exception as e:
+            logger.error(
+                "Redis outbound dedup status failed (fail-closed)",
                 extra={"error": str(e)},
             )
             raise OutboundDedupeError(f"Redis unavailable: {e}") from e

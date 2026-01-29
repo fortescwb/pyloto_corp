@@ -321,8 +321,7 @@ def validate_payload(payload: dict[str, Any]) -> tuple[bool, str]:
         if "reaction" not in payload:
             return False, "Reaction must have reaction field"
 
-    elif message_type == "sticker":
-        if "sticker" not in payload:
-            return False, "Sticker must have sticker field"
+    elif message_type == "sticker" and "sticker" not in payload:
+        return False, "Sticker must have sticker field"
 
     return True, "OK"

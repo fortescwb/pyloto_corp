@@ -13,6 +13,16 @@ import json
 from typing import Any
 
 from pyloto_corp.adapters.whatsapp.models import NormalizedWhatsAppMessage
+from pyloto_corp.observability.logging import get_logger
+
+logger = get_logger(__name__)
+
+# Tipos de mensagem suportados pela API Meta/WhatsApp
+_SUPPORTED_TYPES = frozenset({
+    "text", "image", "video", "audio", "document", "sticker",
+    "location", "address", "contacts", "interactive", "reaction",
+    "button", "order", "system", "request_welcome", "ephemeral",
+})
 
 
 def _extract_text_message(
@@ -234,6 +244,14 @@ def _extract_fields_by_type(
             fields["reaction_message_id"],
             fields["reaction_emoji"],
         ) = _extract_reaction_message(msg)
+
+    else:
+        # Tipo não mapeado - logar para observabilidade sem PII
+        if message_type and message_type not in _SUPPORTED_TYPES:
+            logger.info(
+                "unsupported_message_type_received",
+                extra={"message_type": message_type},
+            )
 
 
 def extract_messages(payload: dict[str, Any]) -> list[NormalizedWhatsAppMessage]:

@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from pyloto_corp.application.session import SessionState
-from pyloto_corp.domain.models import LeadProfile
+from pyloto_corp.domain.enums import Outcome
 from pyloto_corp.domain.intent_queue import IntentQueue
-from pyloto_corp.infra.session_store_redis import RedisSessionStore
+from pyloto_corp.domain.models import LeadProfile
 from pyloto_corp.infra.session_contract import SessionStoreError
+from pyloto_corp.infra.session_store_redis import RedisSessionStore
 
 
 class TestRedisSessionStoreSave:
@@ -23,6 +24,7 @@ class TestRedisSessionStoreSave:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
 
     def test_save_session_success(self):
@@ -100,6 +102,7 @@ class TestRedisSessionStoreLoad:
             session_id=session_id,
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
         return session.model_dump_json()
 
@@ -256,13 +259,11 @@ class TestRedisSessionStoreIntegration:
 
     def _create_session_json(self, session_id: str = "test-session") -> str:
         """Helper para criar JSON de sessão."""
-        user = User(phone_number="+5511987654321", name="Test User")
         session = SessionState(
             session_id=session_id,
-            user=user,
-            active_intent=None,
-            intents=[],
-            context={"key": "value"},
+            lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
+            intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
         return session.model_dump_json()
 
@@ -287,6 +288,7 @@ class TestRedisSessionStoreIntegration:
             session_id="test-session",
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
         store.save(session, ttl_seconds=3600)
 
@@ -321,6 +323,7 @@ class TestRedisSessionStoreIntegration:
             session_id="test-session",
             lead_profile=LeadProfile(phone="+5511987654321", name="Test User"),
             intent_queue=IntentQueue(),
+            outcome=Outcome.AWAITING_USER,
         )
         store.save(session)
 

@@ -47,3 +47,36 @@ def get_logger(name: str) -> logging.Logger:
     """Retorna logger simples; o filtro injeta service/correlation_id."""
 
     return logging.getLogger(name)
+
+
+def log_fallback(
+    logger: logging.Logger,
+    component: str,
+    reason: str | None = None,
+    elapsed_ms: float | None = None,
+) -> None:
+    """Log observável de fallback usado (sem PII).
+
+    Args:
+        logger: Logger instance
+        component: Nome do componente (ex: "event_detection", "response_generation")
+        reason: Razão do fallback (ex: "timeout", "parse_error") — sem PII
+        elapsed_ms: Tempo decorrido em ms (quando aplicável)
+
+    Exemplo:
+        log_fallback(logger, "response_generation", reason="api_timeout", elapsed_ms=5230)
+    """
+    extra = {
+        "fallback_used": True,
+        "component": component,
+    }
+    if reason:
+        extra["reason"] = reason
+    if elapsed_ms is not None:
+        extra["elapsed_ms"] = elapsed_ms
+
+    logger.info(
+        f"Fallback applied for {component}",
+        extra=extra,
+    )
+

@@ -24,11 +24,19 @@ from pyloto_corp.infra.dedupe import (
     RedisDedupeStore,
     create_dedupe_store,
 )
+from pyloto_corp.infra.dedupe_firestore import FirestoreDedupeStore
 from pyloto_corp.infra.http import (
     HttpClient,
     HttpClientConfig,
     HttpError,
     create_http_client,
+)
+from pyloto_corp.infra.inbound_processing_log import (
+    FirestoreInboundProcessingLogStore,
+    InboundProcessingLogStore,
+    MemoryInboundProcessingLogStore,
+    RedisInboundProcessingLogStore,
+    create_inbound_log_store,
 )
 from pyloto_corp.infra.secrets import (
     EnvSecretProvider,
@@ -53,6 +61,7 @@ __all__ = [
     "DedupeError",
     "InMemoryDedupeStore",
     "RedisDedupeStore",
+    "FirestoreDedupeStore",
     "create_dedupe_store",
     # Session
     "SessionStore",
@@ -66,6 +75,12 @@ __all__ = [
     "HttpClientConfig",
     "HttpError",
     "create_http_client",
+    # Inbound processing log
+    "InboundProcessingLogStore",
+    "MemoryInboundProcessingLogStore",
+    "RedisInboundProcessingLogStore",
+    "FirestoreInboundProcessingLogStore",
+    "create_inbound_log_store",
     # Secrets
     "SecretProvider",
     "EnvSecretProvider",

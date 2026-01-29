@@ -1,0 +1,9 @@
+{
+  "error": {
+    "message": "(#80007) Rate limit hit",
+    "type": "OAuthException",
+    "code": 80007,
+    "error_subcode": 2388054,
+    "fbtrace_id": "TRACE_ID_TEST"
+  }
+}

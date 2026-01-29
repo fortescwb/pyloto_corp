@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from pyloto_corp.infra.session_contract import SessionStore
+from pyloto_corp.infra.session_validations import ensure_terminal_outcome
 from pyloto_corp.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -22,6 +23,7 @@ class InMemorySessionStore(SessionStore):
         self._sessions: dict[str, tuple[SessionState, float]] = {}
 
     def save(self, session: SessionState, ttl_seconds: int = 7200) -> None:
+        ensure_terminal_outcome(session)
         expire_at = datetime.now(tz=UTC).timestamp() + ttl_seconds
         self._sessions[session.session_id] = (session, expire_at)
         logger.debug(
@@ -65,3 +67,4 @@ class InMemorySessionStore(SessionStore):
 
     def exists(self, session_id: str) -> bool:
         return self.load(session_id) is not None
+

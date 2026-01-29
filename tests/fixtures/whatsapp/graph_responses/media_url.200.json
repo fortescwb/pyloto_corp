@@ -1,0 +1,8 @@
+{
+  "messaging_product": "whatsapp",
+  "url": "https://example.test/media/001",
+  "mime_type": "image/jpeg",
+  "sha256": "HN8vZ7P0e1E1qQmZeK4wZxB0xXY+",
+  "file_size": 102400,
+  "id": "MEDIA_ID_TEST_001"
+}

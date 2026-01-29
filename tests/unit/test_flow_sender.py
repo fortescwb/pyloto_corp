@@ -8,7 +8,6 @@ import hmac
 import json
 import os
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 from cryptography.hazmat.backends import default_backend
@@ -27,7 +26,6 @@ from pyloto_corp.adapters.whatsapp.flow_sender import (
     FlowSender,
     create_flow_sender,
 )
-
 
 # ============================================================
 # Fixtures

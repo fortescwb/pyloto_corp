@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -256,7 +256,7 @@ class TestTemplateManagerGetTemplate:
             cache_ttl_hours=24,
         )
 
-        result = await manager.get_template("test_namespace", "old_template")
+        await manager.get_template("test_namespace", "old_template")
 
         # Deve ter feito sync e retornado o template atualizado
         assert mock_template_store.get_template.call_count >= 2

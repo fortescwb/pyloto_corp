@@ -27,11 +27,14 @@ def parse_event_detection_response(raw_response: str) -> EventDetectionResult:
 
         # Validação mínima
         event_str = data.get("event", "USER_SENT_TEXT").upper()
-        event = Event[event_str] if event_str in Event.__members__ else Event.USER_SENT_TEXT
+        if event_str in SessionEvent.__members__:
+            event = SessionEvent[event_str]
+        else:
+            event = SessionEvent.USER_SENT_TEXT
 
         return EventDetectionResult(
             event=event,
-            detected_intent=data.get("detected_intent", "UNKNOWN"),
+            detected_intent=data.get("detected_intent", "ENTRY_UNKNOWN"),
             confidence=float(data.get("confidence", 0.5)),
             requires_followup=bool(data.get("requires_followup", False)),
             rationale=data.get("rationale", "Parsed from LLM response"),
@@ -122,7 +125,7 @@ def _fallback_event_detection() -> EventDetectionResult:
     """Fallback determinístico para event detection."""
     return EventDetectionResult(
         event=SessionEvent.USER_SENT_TEXT,
-        detected_intent="UNKNOWN",
+        detected_intent="ENTRY_UNKNOWN",
         confidence=0.3,
         requires_followup=True,
         rationale="Fallback: LLM event detection falhou",

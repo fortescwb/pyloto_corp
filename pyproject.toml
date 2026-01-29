@@ -13,8 +13,11 @@ dependencies = [
   "httpx>=0.25",
   "google-cloud-firestore>=2.16",
   "google-cloud-storage>=2.14",
+  "google-cloud-secret-manager>=2.16",
+  "google-cloud-tasks>=2.16",
   "cryptography>=42.0",
   "openai>=1.45",
+  "redis>=5.0",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +46,12 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = ["B008"]
 
+[tool.ruff.lint.per-file-ignores]
+# SIM117: nested with intencionais para clareza de escopo em testes com múltiplos mocks
+# Justificativa: combinar 5+ context managers em uma linha reduz legibilidade e dificulta debug
+# Escopo restrito aos arquivos que realmente precisam (não global em tests/**)
+"tests/test_llm_pipeline_e2e.py" = ["SIM117"]
+"tests/integration/test_firestore_conversations.py" = ["SIM117"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

@@ -22,16 +22,16 @@ from pyloto_corp.infra.dedupe import (
 class TestInMemoryDedupeStore:
     """Testes para InMemoryDedupeStore."""
 
-    def test_check_and_mark_returns_false_for_new_key(self) -> None:
-        """Chave nova deve retornar False (não é duplicata)."""
+    def test_mark_if_new_returns_true_for_new_key(self) -> None:
+        """Chave nova deve retornar True (marcou)."""
         store = InMemoryDedupeStore()
-        assert store.check_and_mark("key1") is False
+        assert store.mark_if_new("key1") is True
 
-    def test_check_and_mark_returns_true_for_existing_key(self) -> None:
-        """Chave existente deve retornar True (é duplicata)."""
+    def test_mark_if_new_returns_false_for_existing_key(self) -> None:
+        """Chave existente deve retornar False (duplicado)."""
         store = InMemoryDedupeStore()
-        store.check_and_mark("key1")
-        assert store.check_and_mark("key1") is True
+        store.mark_if_new("key1")
+        assert store.mark_if_new("key1") is False
 
     def test_is_duplicate_does_not_mark(self) -> None:
         """is_duplicate não deve marcar a chave."""
@@ -40,15 +40,15 @@ class TestInMemoryDedupeStore:
         assert store.is_duplicate("key1") is False  # Ainda False
 
     def test_is_duplicate_returns_true_after_mark(self) -> None:
-        """is_duplicate deve retornar True após check_and_mark."""
+        """is_duplicate deve retornar True após marcação."""
         store = InMemoryDedupeStore()
-        store.check_and_mark("key1")
+        store.mark_if_new("key1")
         assert store.is_duplicate("key1") is True
 
     def test_clear_removes_key(self) -> None:
         """clear deve remover a chave do store."""
         store = InMemoryDedupeStore()
-        store.check_and_mark("key1")
+        store.mark_if_new("key1")
         assert store.clear("key1") is True
         assert store.is_duplicate("key1") is False
 
@@ -60,20 +60,20 @@ class TestInMemoryDedupeStore:
     def test_ttl_expiration(self) -> None:
         """Chaves expiradas devem ser removidas."""
         store = InMemoryDedupeStore(ttl_seconds=1)
-        store.check_and_mark("key1")
+        store.mark_if_new("key1")
 
         # Simula passagem de tempo
         time.sleep(1.1)
 
         # Após TTL, a chave deve expirar
-        assert store.check_and_mark("key1") is False
+        assert store.mark_if_new("key1") is True
 
     def test_multiple_keys_independent(self) -> None:
         """Múltiplas chaves devem ser independentes."""
         store = InMemoryDedupeStore()
-        store.check_and_mark("key1")
-        assert store.check_and_mark("key2") is False
-        assert store.check_and_mark("key1") is True
+        store.mark_if_new("key1")
+        assert store.mark_if_new("key2") is True
+        assert store.mark_if_new("key1") is False
 
 
 class TestRedisDedupeStore:
@@ -100,8 +100,8 @@ class TestRedisDedupeStore:
         )
         assert store._make_key("mykey") == "dedupe:mykey"
 
-    def test_check_and_mark_with_mocked_redis(self) -> None:
-        """check_and_mark deve usar SETNX com TTL."""
+    def test_mark_if_new_with_mocked_redis(self) -> None:
+        """mark_if_new deve usar SETNX com TTL."""
         store = RedisDedupeStore(
             redis_url="redis://localhost:6379/0",
             ttl_seconds=3600,
@@ -112,9 +112,9 @@ class TestRedisDedupeStore:
         mock_client.set.return_value = True
         store._client = mock_client
 
-        result = store.check_and_mark("key1")
+        result = store.mark_if_new("key1")
 
-        assert result is False  # Não é duplicata
+        assert result is True  # Marcou chave nova
         mock_client.set.assert_called_once_with(
             "dedupe:key1",
             "1",
@@ -122,8 +122,8 @@ class TestRedisDedupeStore:
             ex=3600,
         )
 
-    def test_check_and_mark_returns_true_for_duplicate(self) -> None:
-        """check_and_mark deve retornar True para duplicata."""
+    def test_mark_if_new_returns_false_for_duplicate(self) -> None:
+        """mark_if_new deve retornar False para duplicata."""
         store = RedisDedupeStore(redis_url="redis://localhost:6379/0")
 
         mock_client = MagicMock()
@@ -131,8 +131,8 @@ class TestRedisDedupeStore:
         mock_client.set.return_value = False
         store._client = mock_client
 
-        result = store.check_and_mark("existing_key")
-        assert result is True  # É duplicata
+        result = store.mark_if_new("existing_key")
+        assert result is False  # É duplicata
 
     def test_is_duplicate_uses_exists(self) -> None:
         """is_duplicate deve usar EXISTS do Redis."""
@@ -168,7 +168,7 @@ class TestRedisDedupeStore:
         store._client = mock_client
 
         with pytest.raises(DedupeError, match="Falha ao verificar"):
-            store.check_and_mark("key1")
+            store.mark_if_new("key1")
 
     def test_fail_open_returns_false_on_error(self) -> None:
         """Em fail_closed=False, erro deve retornar False (processa)."""
@@ -181,9 +181,9 @@ class TestRedisDedupeStore:
         mock_client.set.side_effect = Exception("Connection refused")
         store._client = mock_client
 
-        # Não levanta erro, retorna False (não é duplicata)
-        result = store.check_and_mark("key1")
-        assert result is False
+        # Não levanta erro, retorna True (processa mesmo sem marcar)
+        result = store.mark_if_new("key1")
+        assert result is True
 
 
 class TestCreateDedupeStore:
@@ -256,3 +256,22 @@ class TestCreateDedupeStore:
         )
 
         assert store._fail_closed is False
+
+    def test_creates_firestore_store_for_firestore_backend(self) -> None:
+        """Deve criar FirestoreDedupeStore quando backend=firestore."""
+        settings = Settings(
+            dedupe_backend="firestore",
+            firestore_project_id="demo-project",
+        )
+
+        with (
+            patch("google.cloud.firestore.Client", return_value=MagicMock()),
+            patch("pyloto_corp.infra.dedupe_firestore.FirestoreDedupeStore") as mock_store_cls,
+        ):
+            store_instance = MagicMock()
+            mock_store_cls.return_value = store_instance
+
+            store = create_dedupe_store(settings)
+
+            assert store is store_instance
+            mock_store_cls.assert_called_once()

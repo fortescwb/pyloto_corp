@@ -3,20 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
 
-import pytest
-
-from pyloto_corp.application.export import ExportConversationUseCase
-from pyloto_corp.domain.conversations import ConversationMessage, Page
+from pyloto_corp.domain.conversations import ConversationMessage
 from pyloto_corp.domain.profile import UserProfile
-from pyloto_corp.infra.firestore_conversations import (
-    FirestoreConversationStore,
-)
+
 from ..unit.test_export_helpers import (
-    FakeAuditStore,
-    FakeExporter,
-    FakeProfileStore,
     create_export_use_case,
 )
 
@@ -208,7 +199,7 @@ class TestExportIntegration:
 
     def test_export_audit_trail_integration(self):
         """Testa que auditoria é integrada com export."""
-        ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
+        datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
         messages = []
 
         use_case = create_export_use_case(messages, None)

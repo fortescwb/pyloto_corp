@@ -6,6 +6,7 @@ Estende HttpClient genérico com comportamentos específicos de WhatsApp:
 - Validação de assinatura em responses (quando aplicável)
 - Logging estruturado sem PII (tokens, números, etc.)
 - Tratamento de erros Meta (error.type, error.message)
+- **Validação de access_token antes de usar**
 
 Conforme regras_e_padroes.md:
 - Máximo 200 linhas por arquivo
@@ -127,6 +128,7 @@ class WhatsAppHttpClient(HttpClient):
     - Erros Meta (error.type, error.code): classifica permanente vs transitório
     - Validação de response: nunca retorna resposta mal-formada
     - Logging: sem tokens, números, ou dados sensíveis
+    - **Validação de access_token antes de usar**
     """
 
     def __init__(
@@ -149,15 +151,61 @@ class WhatsAppHttpClient(HttpClient):
         access_token: str,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
-        """Envia mensagem via WhatsApp API."""
+        """Envia mensagem via WhatsApp API.
+
+        Args:
+            endpoint: URL do endpoint (ex: .../messages)
+            access_token: Bearer token para autenticação
+            payload: Payload JSON da mensagem
+
+        Returns:
+            Response JSON da Meta
+
+        Raises:
+            ValueError: Se access_token está vazio ou inválido
+            HttpError: Se erro HTTP ou Meta
+        """
+        # Validar access_token antes de usar (CRÍTICO)
+        if not access_token or not access_token.strip():
+            logger.error(
+                "access_token ausente ou vazio para send_message",
+                extra={"endpoint": endpoint},
+            )
+            raise ValueError(
+                "access_token é obrigatório para envio de mensagens. "
+                "Verifique se WHATSAPP_ACCESS_TOKEN está configurado."
+            )
+
         url, headers = self._build_request(endpoint, access_token)
         response = await self._execute_send(url, payload, headers, endpoint)
         return self._process_whatsapp_response(response, endpoint)
 
-    def _build_request(self, endpoint: str, access_token: str) -> tuple[str, dict[str, str]]:
-        """Monta URL e headers seguros para envio."""
-        url = f"{endpoint}?access_token={access_token}"
-        return url, {"Content-Type": "application/json"}
+    def _build_request(
+        self, endpoint: str, access_token: str
+    ) -> tuple[str, dict[str, str]]:
+        """Monta URL e headers seguros para envio.
+
+        Usa Authorization header conforme recomendação Meta:
+        https://developers.facebook.com/docs/graph-api/guides/authentication
+
+        Args:
+            endpoint: URL do endpoint
+            access_token: Bearer token (já validado por send_message)
+
+        Returns:
+            (endpoint, headers)
+
+        Raises:
+            ValueError: Se access_token inválido (defense in depth)
+        """
+        if not access_token or not access_token.strip():
+            raise ValueError("access_token não pode ser vazio")
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
+        return endpoint, headers
 
     async def _execute_send(
         self,
@@ -171,9 +219,6 @@ class WhatsAppHttpClient(HttpClient):
             return await self.post(url, json=payload, headers=headers)
         except HttpError:
             raise
-        except Exception as e:
-            logger.error("Erro inesperado ao enviar WhatsApp", extra={"endpoint": endpoint})
-            raise HttpError(f"Erro inesperado: {type(e).__name__}") from e
 
     def _process_whatsapp_response(
         self,
@@ -194,47 +239,32 @@ class WhatsAppHttpClient(HttpClient):
         _log_success("POST", endpoint, response.status_code)
         return response_data
 
-    def _handle_meta_error(self, meta_error: WhatsAppApiError, endpoint: str) -> None:
-        """Trata e lança exceção para erro da Meta."""
+    def _handle_meta_error(
+        self,
+        meta_error: WhatsAppApiError,
+        endpoint: str,
+    ) -> None:
+        """Lida com erro da Meta."""
         _log_meta_error(meta_error, "POST", endpoint)
-        kind = "permanente" if meta_error.is_permanent else "transitório"
-        msg = f"Erro {kind}: {meta_error.error_message}"
+
+        # Determina se erro é retryable baseado em classificação
+        is_retryable = not meta_error.is_permanent
+
         raise HttpError(
-            msg,
+            f"Meta API error: {meta_error.error_type} ({meta_error.error_code})",
             status_code=meta_error.error_code,
-            is_retryable=not meta_error.is_permanent,
+            is_retryable=is_retryable,
         )
 
 
 def create_whatsapp_http_client(
     settings: Settings,
 ) -> WhatsAppHttpClient:
-    """Factory para criar cliente WhatsApp configurado.
-
-    Args:
-        settings: Configurações da aplicação
-
-    Returns:
-        WhatsAppHttpClient pronto para uso
-    """
+    """Factory para criar cliente WhatsApp com config padrão."""
     config = HttpClientConfig(
         timeout_seconds=float(settings.whatsapp_request_timeout_seconds),
         max_retries=settings.whatsapp_max_retries,
-        backoff_base_seconds=float(settings.whatsapp_retry_backoff_seconds),
-        default_headers={
-            "User-Agent": f"{settings.service_name}/{settings.version}",
-        },
-        verify_ssl=settings.is_production,
     )
-
-    logger.info(
-        "Cliente WhatsApp HTTP criado",
-        extra={
-            "timeout": config.timeout_seconds,
-            "max_retries": config.max_retries,
-        },
-    )
-
     return WhatsAppHttpClient(
         config=config,
         phone_number_id=settings.whatsapp_phone_number_id,

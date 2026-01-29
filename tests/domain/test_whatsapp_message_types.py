@@ -19,12 +19,12 @@ from pyloto_corp.domain.whatsapp_message_types import (
     InteractiveLocationRequestMessage,
     ListItem,
     LocationMessage,
+    MessageMetadata,
     ReactionMessage,
     StickerMessage,
     TemplateMessage,
     TextMessage,
     VideoMessage,
-    MessageMetadata,
 )
 
 
@@ -329,7 +329,7 @@ class TestButtonReply:
 
     def test_button_reply_slots(self):
         """ButtonReply deve usar slots para eficiência."""
-        btn = ButtonReply(id="btn-1", title="Opção 1")
+        ButtonReply(id="btn-1", title="Opção 1")
         # Verificar que é dataclass com slots
         assert hasattr(ButtonReply, "__slots__")
 

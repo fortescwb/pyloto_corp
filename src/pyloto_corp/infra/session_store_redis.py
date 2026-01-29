@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from pyloto_corp.infra.session_contract import SessionStore, SessionStoreError
+from pyloto_corp.infra.session_validations import ensure_terminal_outcome
 from pyloto_corp.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -21,6 +22,7 @@ class RedisSessionStore(SessionStore):
         self._redis = redis_client
 
     def save(self, session: SessionState, ttl_seconds: int = 7200) -> None:
+        ensure_terminal_outcome(session)
         key = f"session:{session.session_id}"
         payload = session.model_dump_json()
 
@@ -93,3 +95,4 @@ class RedisSessionStore(SessionStore):
                 extra={"session_id": session_id[:8] + "...", "error": str(e)},
             )
             return False
+

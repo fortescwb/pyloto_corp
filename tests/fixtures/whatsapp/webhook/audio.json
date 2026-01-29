@@ -1,0 +1,42 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "BUSINESS_ID_TEST",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "+55 11 99999-9999",
+              "phone_number_id": "PHONE_NUMBER_ID_TEST"
+            },
+            "contacts": [
+              {
+                "profile": {
+                  "name": "PROFILE_NAME_TEST"
+                },
+                "wa_id": "WA_ID_TEST"
+              }
+            ],
+            "messages": [
+              {
+                "from": "5511888888888",
+                "id": "wamid.MSG_ID_TEST_001",
+                "timestamp": "1700000000",
+                "type": "audio",
+                "audio": {
+                  "mime_type": "audio/ogg; codecs=opus",
+                  "sha256": "AU8vZ7P0e1E1qQmZeK4wZxB0xXY+",
+                  "id": "MEDIA_ID_TEST_001",
+                  "voice": true
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

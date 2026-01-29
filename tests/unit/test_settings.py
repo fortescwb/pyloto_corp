@@ -151,3 +151,146 @@ class TestGetSettings:
         s1 = get_settings()
         s2 = get_settings()
         assert s1 is s2
+
+
+class TestSessionStoreValidation:
+    """Testes para validação de session store backend (C2)."""
+
+    def test_session_store_backend_defaults_to_memory(self) -> None:
+        """Default deve ser memory (para dev/test)."""
+        s = Settings()
+        assert s.session_store_backend == "memory"
+
+    def test_session_store_backend_environment_variable(self) -> None:
+        """Deve ler SESSION_STORE_BACKEND de env."""
+        s = Settings(session_store_backend="firestore")
+        assert s.session_store_backend == "firestore"
+
+    def test_validate_session_store_valid_backends(self) -> None:
+        """Backends válidos: memory, redis, firestore."""
+        for backend in ["memory", "redis", "firestore"]:
+            s = Settings(environment="development", session_store_backend=backend)
+            errors = s.validate_session_store_config()
+            # Em dev, todos são permitidos
+            assert errors == [], f"Backend {backend} não deveria ter erro em dev"
+
+    def test_validate_session_store_rejects_invalid_backend(self) -> None:
+        """Rejeita backend desconhecido."""
+        s = Settings(session_store_backend="invalid_backend")
+        errors = s.validate_session_store_config()
+        assert any("inválido" in e.lower() for e in errors)
+
+    def test_validate_session_store_memory_allowed_in_dev(self) -> None:
+        """Memory é permitido em development."""
+        s = Settings(environment="development", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert errors == []
+
+    def test_validate_session_store_memory_allowed_in_local(self) -> None:
+        """Memory é permitido em local."""
+        s = Settings(environment="local", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert errors == []
+
+    def test_validate_session_store_memory_allowed_in_test(self) -> None:
+        """Memory é permitido em test."""
+        s = Settings(environment="test", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert errors == []
+
+    def test_validate_session_store_memory_forbidden_in_production(self) -> None:
+        """Memory é PROIBIDO em production."""
+        s = Settings(environment="production", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert any("proibido" in e.lower() for e in errors)
+        assert any("memory" in e.lower() for e in errors)
+
+    def test_validate_session_store_memory_forbidden_in_prod(self) -> None:
+        """Memory é PROIBIDO em prod (alias de production)."""
+        s = Settings(environment="prod", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert any("proibido" in e.lower() for e in errors)
+
+    def test_validate_session_store_memory_forbidden_in_staging(self) -> None:
+        """Memory é PROIBIDO em staging (preparação para prod)."""
+        s = Settings(environment="staging", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert any("proibido" in e.lower() for e in errors)
+
+    def test_validate_session_store_memory_forbidden_in_stage(self) -> None:
+        """Memory é PROIBIDO em stage (alias de staging)."""
+        s = Settings(environment="stage", session_store_backend="memory")
+        errors = s.validate_session_store_config()
+        assert any("proibido" in e.lower() for e in errors)
+
+    def test_validate_session_store_redis_allowed_in_production(self) -> None:
+        """Redis é permitido em production."""
+        s = Settings(environment="production", session_store_backend="redis")
+        errors = s.validate_session_store_config()
+        assert errors == []
+
+    def test_validate_session_store_firestore_allowed_in_production(self) -> None:
+        """Firestore é permitido em production."""
+        s = Settings(environment="production", session_store_backend="firestore")
+        errors = s.validate_session_store_config()
+        assert errors == []
+
+    def test_validate_session_store_case_insensitive(self) -> None:
+        """Validação deve ser case-insensitive."""
+        s = Settings(environment="production", session_store_backend="REDIS")
+        errors = s.validate_session_store_config()
+        # REDIS (uppercase) deve ser tratado como redis (lowercase)
+        assert errors == []
+
+
+class TestOpenAIConfig:
+    """Testes para validação de OPENAI_ENABLED e configuração."""
+
+    def test_openai_enabled_defaults_to_false(self) -> None:
+        """Default deve ser false (fail-safe)."""
+        s = Settings()
+        assert s.openai_enabled is False
+
+    def test_openai_enabled_from_environment(self) -> None:
+        """Deve ler OPENAI_ENABLED de env."""
+        s = Settings(openai_enabled=True)
+        assert s.openai_enabled is True
+
+    def test_openai_enabled_is_boolean(self) -> None:
+        """Campo deve ser boolean, não string."""
+        s = Settings(openai_enabled=False)
+        assert isinstance(s.openai_enabled, bool)
+        assert s.openai_enabled is False
+
+    def test_validate_openai_config_passes_when_disabled(self) -> None:
+        """Sem erro quando openai_enabled=false (não precisa de chave)."""
+        s = Settings(openai_enabled=False)
+        errors = s.validate_openai_config()
+        assert errors == []
+
+    def test_validate_openai_config_passes_when_enabled_with_key(self) -> None:
+        """Sem erro quando openai_enabled=true + openai_api_key configurado."""
+        s = Settings(openai_enabled=True, openai_api_key="test-key-12345")
+        errors = s.validate_openai_config()
+        assert errors == []
+
+    def test_validate_openai_config_fails_when_enabled_without_key(self) -> None:
+        """Erro quando openai_enabled=true mas openai_api_key=None."""
+        s = Settings(openai_enabled=True, openai_api_key=None)
+        errors = s.validate_openai_config()
+        assert any("OPENAI_API_KEY" in e for e in errors)
+
+    def test_validate_openai_model_default(self) -> None:
+        """Modelo padrão deve ser gpt-4o-mini."""
+        s = Settings()
+        assert s.openai_model == "gpt-4o-mini"
+
+    def test_openai_timeout_configurable(self) -> None:
+        """Timeout deve ser configurável."""
+        s = Settings(openai_timeout_seconds=20)
+        assert s.openai_timeout_seconds == 20
+
+    def test_openai_max_retries_configurable(self) -> None:
+        """Max retries deve ser configurável."""
+        s = Settings(openai_max_retries=3)
+        assert s.openai_max_retries == 3

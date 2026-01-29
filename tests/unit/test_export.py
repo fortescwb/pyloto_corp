@@ -9,9 +9,9 @@ import pytest
 
 from pyloto_corp.domain.conversations import ConversationMessage
 from pyloto_corp.domain.profile import UserProfile
+
 from .test_export_helpers import (
     create_export_use_case,
-    make_event,
 )
 
 
@@ -348,7 +348,7 @@ def test_export_user_key_derivation():
 
 def test_export_audit_event_recorded():
     """Testa que evento de export é registrado na auditoria."""
-    ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
+    datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
     messages = []
     
     use_case = create_export_use_case(messages, None)
@@ -412,7 +412,7 @@ def test_export_requires_reason():
 
 def test_export_includes_header_sections():
     """Testa que export contém todas as seções esperadas."""
-    ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
+    datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
     messages = []
 
     use_case = create_export_use_case(messages, None)

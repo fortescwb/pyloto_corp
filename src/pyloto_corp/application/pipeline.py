@@ -24,10 +24,16 @@ from typing import TYPE_CHECKING, Any
 from pyloto_corp.adapters.whatsapp.models import WebhookProcessingSummary
 from pyloto_corp.adapters.whatsapp.normalizer import extract_messages
 from pyloto_corp.application.session import SessionState
+from pyloto_corp.application.state_selector import select_next_state
 from pyloto_corp.domain.abuse_detection import (
     AbuseChecker,
     FloodDetector,
     SpamDetector,
+)
+from pyloto_corp.domain.conversation_state import (
+    ConversationState,
+    StateSelectorInput,
+    StateSelectorOutput,
 )
 from pyloto_corp.domain.enums import Outcome
 from pyloto_corp.observability.logging import get_logger
@@ -50,6 +56,7 @@ class ProcessedMessage:
     session_id: str
     outcome: Outcome
     reply_text: str | None = None
+    state_decision: StateSelectorOutput | None = None
 
 
 @dataclass(slots=True)
@@ -78,6 +85,10 @@ class WhatsAppInboundPipeline:
         orchestrator: AIOrchestrator,
         flood_detector: FloodDetector | None = None,
         max_intent_limit: int = 3,
+        state_selector_client: Any | None = None,
+        state_selector_model: str | None = None,
+        state_selector_threshold: float = 0.7,
+        state_selector_enabled: bool = True,
     ) -> None:
         self._dedupe = dedupe_store
         self._sessions = session_store
@@ -86,6 +97,10 @@ class WhatsAppInboundPipeline:
         self._max_intents = max_intent_limit
         self._spam = SpamDetector()
         self._abuse_checker = AbuseChecker(max_intents_exceeded=max_intent_limit)
+        self._state_selector_client = state_selector_client
+        self._state_selector_model = state_selector_model
+        self._state_selector_threshold = state_selector_threshold
+        self._state_selector_enabled = state_selector_enabled
 
     def process_webhook(
         self, payload: dict[str, Any], sender_phone: str | None = None
@@ -111,7 +126,7 @@ class WhatsAppInboundPipeline:
         self, message: Any, sender_phone: str | None
     ) -> tuple[ProcessedMessage | None, bool]:
         """Processa uma mensagem e indica se foi deduplicada."""
-        if self._dedupe.check_and_mark(message.message_id):
+        if not self._dedupe.mark_if_new(message.message_id):
             logger.debug(
                 "Message deduplicated",
                 extra={"message_id": message.message_id[:8]},
@@ -188,6 +203,35 @@ class WhatsAppInboundPipeline:
         self, message: Any, session: SessionState
     ) -> ProcessedMessage:
         """Orquestra IA, atualiza e persiste sessão."""
+        state_decision: StateSelectorOutput | None = None
+
+        if self._state_selector_enabled:
+            selector_input = StateSelectorInput(
+                current_state=ConversationState(session.current_state),
+                possible_next_states=[
+                    ConversationState.AWAITING_USER,
+                    ConversationState.HANDOFF_HUMAN,
+                    ConversationState.SELF_SERVE_INFO,
+                    ConversationState.ROUTE_EXTERNAL,
+                    ConversationState.SCHEDULED_FOLLOWUP,
+                ],
+                message_text=message.text or "",
+                history_summary=[h.get("summary", "") for h in session.message_history],
+            )
+            state_decision = select_next_state(
+                selector_input,
+                self._state_selector_client,
+                correlation_id=message.message_id,
+                model=self._state_selector_model,
+                confidence_threshold=self._state_selector_threshold,
+            )
+            if state_decision.accepted:
+                session.current_state = state_decision.next_state.value
+            else:
+                session.message_history.append(
+                    {"summary": "state_hint", "hint": state_decision.response_hint}
+                )
+
         ai_response = self._orchestrator.process_message(
             message, session=session, is_duplicate=False
         )
@@ -196,8 +240,8 @@ class WhatsAppInboundPipeline:
             session.intent_queue.add_intent(
                 ai_response.intent, confidence=ai_response.confidence
             )
-        if ai_response.outcome:
-            session.outcome = ai_response.outcome
+
+        session.outcome = ai_response.outcome or Outcome.AWAITING_USER
 
         try:
             self._sessions.save(session)
@@ -207,14 +251,18 @@ class WhatsAppInboundPipeline:
                 extra={"session_id": session.session_id[:8], "error": str(e)},
             )
 
-        outcome = ai_response.outcome or Outcome.AWAITING_USER
+        outcome = session.outcome
         logger.info(
             "Message processed",
             extra={"message_id": message.message_id[:8], "outcome": outcome},
         )
         return ProcessedMessage(
-            message_id=message.message_id, is_duplicate=False, session_id=session.session_id,
-            outcome=outcome, reply_text=ai_response.reply_text,
+            message_id=message.message_id,
+            is_duplicate=False,
+            session_id=session.session_id,
+            outcome=outcome,
+            reply_text=ai_response.reply_text,
+            state_decision=state_decision,
         )
 
     def _build_result(
@@ -282,6 +330,7 @@ def process_whatsapp_webhook(
     dedupe_store: DedupeStore,
     session_store: SessionStore,
     orchestrator: AIOrchestrator,
+    flood_detector: FloodDetector | None = None,
 ) -> PipelineResult:
     """Função de conveniência para processamento de webhook.
 
@@ -290,15 +339,16 @@ def process_whatsapp_webhook(
         dedupe_store: Store de deduplicação
         session_store: Store de persistência de sessão
         orchestrator: Orquestrador de IA
+        flood_detector: Detector de flood (opcional)
 
     Returns:
         PipelineResult com resumo e detalhes
     """
-
     pipeline = WhatsAppInboundPipeline(
         dedupe_store=dedupe_store,
         session_store=session_store,
         orchestrator=orchestrator,
+        flood_detector=flood_detector,
     )
 
     return pipeline.process_webhook(payload)

@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from pyloto_corp.infra.session_contract import SessionStore, SessionStoreError
+from pyloto_corp.infra.session_validations import ensure_terminal_outcome
 from pyloto_corp.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -41,6 +42,7 @@ class FirestoreSessionStore(SessionStore):
         self._collection = collection
 
     def save(self, session: SessionState, ttl_seconds: int = 7200) -> None:
+        ensure_terminal_outcome(session)
         doc_ref = self._client.collection(self._collection).document(session.session_id)
         expire_at = datetime.now(tz=UTC) + timedelta(seconds=ttl_seconds)
 
@@ -126,3 +128,4 @@ class FirestoreSessionStore(SessionStore):
                 extra={"session_id": session_id[:8] + "...", "error": str(e)},
             )
             return False
+

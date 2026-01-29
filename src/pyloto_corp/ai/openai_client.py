@@ -19,9 +19,8 @@ from pyloto_corp.ai import openai_parser, openai_prompts
 from pyloto_corp.ai.contracts.event_detection import EventDetectionResult
 from pyloto_corp.ai.contracts.message_type_selection import MessageTypeSelectionResult
 from pyloto_corp.ai.contracts.response_generation import ResponseGenerationResult
-
 from pyloto_corp.domain.enums import Intent
-from pyloto_corp.observability.logging import get_logger
+from pyloto_corp.observability.logging import get_logger, log_fallback
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -70,9 +69,10 @@ class OpenAIClientManager:
             return openai_parser.parse_event_detection_response(result_text)
 
         except (APIError, APITimeoutError) as e:
-            logger.warning(
-                "event_detection_error",
-                extra={"error": str(e), "error_type": type(e).__name__},
+            log_fallback(
+                logger,
+                "event_detection",
+                reason=type(e).__name__,
             )
             return openai_parser._fallback_event_detection()
 
@@ -105,9 +105,10 @@ class OpenAIClientManager:
             return openai_parser.parse_response_generation_response(result_text)
 
         except (APIError, APITimeoutError) as e:
-            logger.warning(
-                "response_generation_error",
-                extra={"error": str(e), "error_type": type(e).__name__},
+            log_fallback(
+                logger,
+                "response_generation",
+                reason=type(e).__name__,
             )
             return openai_parser._fallback_response_generation()
 
@@ -138,9 +139,10 @@ class OpenAIClientManager:
             return openai_parser.parse_message_type_response(result_text)
 
         except (APIError, APITimeoutError) as e:
-            logger.warning(
-                "message_type_selection_error",
-                extra={"error": str(e), "error_type": type(e).__name__},
+            log_fallback(
+                logger,
+                "message_type_selection",
+                reason=type(e).__name__,
             )
             return openai_parser._fallback_message_type_selection()
 

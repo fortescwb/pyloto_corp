@@ -12,5 +12,8 @@ dist
 .ruff_cache
 .git
 .github
-docs
 tests
+
+# Exclude docs except institucional (needed for LLM context)
+docs/*
+!docs/institucional

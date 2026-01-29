@@ -10,7 +10,7 @@ a empresa e respeite os limites de escopo definidos em docs/institucional/.
 from __future__ import annotations
 
 import logging
-from functools import lru_cache
+import os
 from pathlib import Path
 
 from pyloto_corp.observability.logging import get_logger
@@ -29,10 +29,12 @@ class InstitucionalContextLoader:
 
     def __init__(self) -> None:
         """Inicializa o loader com caminhos dos documentos."""
-        self._docs_dir = Path(__file__).parent.parent.parent.parent / "docs" / "institucional"
+        # Use env var PYLOTO_DOCS_DIR if set, otherwise fallback to relative path
+        fallback_docs = str(Path(__file__).parent.parent.parent.parent / "docs")
+        docs_base = os.environ.get("PYLOTO_DOCS_DIR", fallback_docs)
+        self._docs_dir = Path(docs_base) / "institucional"
         self._cached_context: dict[str, str] = {}
 
-    @lru_cache(maxsize=1)
     def load_vertentes(self) -> str:
         """Carrega documento de vertentes (estrutura do ecossistema).
         
@@ -42,6 +44,10 @@ class InstitucionalContextLoader:
         Raises:
             FileNotFoundError: Se arquivo não existir.
         """
+        cache_key = "vertentes"
+        if cache_key in self._cached_context:
+            return self._cached_context[cache_key]
+        
         vertentes_path = self._docs_dir / "vertentes.md"
         if not vertentes_path.exists():
             msg = f"Arquivo de vertentes não encontrado: {vertentes_path}"
@@ -50,13 +56,13 @@ class InstitucionalContextLoader:
         
         try:
             content = vertentes_path.read_text(encoding="utf-8")
+            self._cached_context[cache_key] = content
             logger.debug("Vertentes carregadas com sucesso")
             return content
         except Exception as e:
             logger.error(f"Erro ao carregar vertentes: {e}", exc_info=True)
             raise
 
-    @lru_cache(maxsize=1)
     def load_visao_principios(self) -> str:
         """Carrega documento de visão e princípios.
         
@@ -66,6 +72,10 @@ class InstitucionalContextLoader:
         Raises:
             FileNotFoundError: Se arquivo não existir.
         """
+        cache_key = "visao_principios"
+        if cache_key in self._cached_context:
+            return self._cached_context[cache_key]
+        
         visao_path = self._docs_dir / "visao_principios-e-posicionamento.md"
         if not visao_path.exists():
             msg = f"Arquivo de visão/princípios não encontrado: {visao_path}"
@@ -74,13 +84,13 @@ class InstitucionalContextLoader:
         
         try:
             content = visao_path.read_text(encoding="utf-8")
+            self._cached_context[cache_key] = content
             logger.debug("Visão e princípios carregados com sucesso")
             return content
         except Exception as e:
             logger.error(f"Erro ao carregar visão/princípios: {e}", exc_info=True)
             raise
 
-    @lru_cache(maxsize=1)
     def load_contexto_llm(self) -> str:
         """Carrega documento de contexto LLM (taxonomy, intents, responses).
         
@@ -90,6 +100,10 @@ class InstitucionalContextLoader:
         Raises:
             FileNotFoundError: Se arquivo não existir.
         """
+        cache_key = "contexto_llm"
+        if cache_key in self._cached_context:
+            return self._cached_context[cache_key]
+        
         contexto_path = self._docs_dir / "contexto_llm" / "doc.md"
         if not contexto_path.exists():
             msg = f"Arquivo de contexto LLM não encontrado: {contexto_path}"
@@ -98,6 +112,7 @@ class InstitucionalContextLoader:
         
         try:
             content = contexto_path.read_text(encoding="utf-8")
+            self._cached_context[cache_key] = content
             logger.debug("Contexto LLM carregado com sucesso")
             return content
         except Exception as e:

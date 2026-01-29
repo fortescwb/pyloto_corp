@@ -1,0 +1,38 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "BUSINESS_ID_TEST",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "+55 11 99999-9999",
+              "phone_number_id": "PHONE_NUMBER_ID_TEST"
+            },
+            "statuses": [
+              {
+                "id": "wamid.STATUS_ID_TEST_001",
+                "status": "failed",
+                "timestamp": "1700000000",
+                "recipient_id": "5511888888888",
+                "errors": [
+                  {
+                    "code": 131047,
+                    "title": "Re-engagement message",
+                    "message": "More than 24 hours have passed since the recipient last replied to the sender number.",
+                    "error_data": {
+                      "details": "Message failed to send because more than 24 hours have passed since the customer last replied."
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}
