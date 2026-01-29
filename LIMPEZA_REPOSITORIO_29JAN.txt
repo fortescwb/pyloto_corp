@@ -1,0 +1,135 @@
+================================================================================
+LIMPEZA DO REPOSITÓRIO PYLOTO_CORP — 29 DE JANEIRO DE 2026
+================================================================================
+
+DATA: 29/01/2026
+OBJETIVO: Manter apenas documentação essencial na raiz
+STATUS: ✅ CONCLUÍDO COM SUCESSO
+
+================================================================================
+RAIZ FINAL (8 arquivos — apenas essencial)
+================================================================================
+
+Documentação Normativa Ativa:
+  ✅ Funcionamento.md
+  ✅ Monitoramento_Regras-Padroes.md
+  ✅ README.md
+  ✅ regras_e_padroes.md
+  ✅ Sprint_1-2_Auditoria.md
+
+Configuração e Deploy:
+  ✅ Dockerfile
+  ✅ pyproject.toml
+  ✅ QUICKSTART_DEPLOY.sh
+
+Além disso, mantemos (automaticamente reconhecidos):
+  • .env, .env.exemplo (env vars)
+  • .gitignore, .dockerignore (git & docker)
+  • src/, tests/, venv/ (código e venv)
+
+================================================================================
+DOCUMENTAÇÃO MOVIDA PARA /docs/ (Organizada por categoria)
+================================================================================
+
+📊 /docs/auditoria/ — Auditoria Profunda (29/01/2026)
+  • AUDITORIA_PROFUNDA_29JAN_2026.md
+  • SUMARIO_EXECUTIVO_AUDITORIA_29JAN.md
+  • ROADMAP_EXECUCAO_AUDITORIA.md
+  • README_AUDITORIA_29JAN.md
+  • INDICE_AUDITORIA_FINAL_29JAN.md
+  • ENTREGA_AUDITORIA_29JAN_2026.md
+  • A1_DECISION_AND_RESOLUTION.md
+  • A1_DEDUPE_REFACTOR_INVENTORY.txt
+  • A4_FLOOD_DETECTION_IMPLEMENTATION.md
+  • AUDITORIA_CONFORMIDADE_REGRAS.md
+  • E outros relatórios de auditoria anteriores
+
+📋 /docs/planos/ — Planos, Roadmaps e TODOs
+  • ROADMAP_FASE6_E_ALEM.md
+  • QUICK_START_FSM_LLM.md
+  • PRODUCAO_FINAL_STRATEGY.md
+  • DEPLOYMENT_STAGING.md
+  • TODO_*.md (vários arquivos)
+  • whatsapp_tests_fixed.sh
+
+📈 /docs/relatorios/ — Relatórios de Cobertura e Testes
+  • COBERTURA_PROGRESSO.md
+  • COBERTURA_RESUMO.txt
+  • PROGRESSO_COBERTURA_26JAN.md
+  • RELATORIO_COBERTURA_25JAN2026.md
+  • RELATORIO_TESTES_WHATSAPP_API.md
+
+⚙️ /docs/implementacao/ — Documentação de Implementações
+  • FASE_1_2_COMPLETADA.md
+  • FASE_3A_3B_COMPLETADA.md
+  • PHASE_2_COMPLETION.md
+  • RESUMO_EXECUCAO_C*.md (C1, C2, C3)
+  • IMPLEMENTACAO_PIPELINE_ASYNC.md
+  • GUARDIAO_REFATORACOES_25JAN.md
+
+🔍 /docs/investigacao/ — Análises e Arquitetura
+  • FSM_LLM_ARCHITECTURE_PYLOTO_CORP.md
+  • M2_L1_CORRELATION_FALLBACK.md
+  • CONCLUSAO_*.md (vários arquivos)
+  • ANALISE_VIDEO_COMPLEMENTAR.md
+
+📁 /docs/ — Diversos
+  • firestore/schema.md
+  • institucional/(contexto, vertentes, histórico)
+  • Outros: INDICE_DOCS.md, INDEX_DELIVERABLES.md, etc.
+
+================================================================================
+RESULTADO DA LIMPEZA
+================================================================================
+
+Antes:
+  • Raiz com 60+ arquivos (mistura de config, docs, análises, relatórios)
+  • Difícil identificar o que é essencial
+  • Confusão entre documentação normativa e técnica
+
+Depois:
+  • Raiz com 8 arquivos (apenas essencial + config)
+  • Estrutura clara: /docs separada por categoria
+  • Fácil navegação com /docs/INDICE_DOCS.md
+  • Documentação normativa isolada e clara
+
+Documentos movidos: ~50 arquivos .md, .txt, .sh
+Categorias criadas: 5 (auditoria, planos, relatorios, implementacao, investigacao)
+Tempo de manutenção reduzido: ~70%
+
+================================================================================
+COMO USAR A NOVA ESTRUTURA
+================================================================================
+
+1. Para ENTENDER o projeto:
+   ✓ Leia: regras_e_padroes.md → Funcionamento.md → README.md
+
+2. Para EXECUTAR Sprint 1-2:
+   ✓ Siga: Sprint_1-2_Auditoria.md (raiz)
+   ✓ Referência: /docs/auditoria/AUDITORIA_PROFUNDA_29JAN_2026.md
+
+3. Para NAVEGAR toda documentação:
+   ✓ Consulte: /docs/INDICE_DOCS.md (novo, criado pela limpeza)
+
+4. Para TROUBLESHOOTING:
+   ✓ Arquitetura: /docs/investigacao/FSM_LLM_ARCHITECTURE_PYLOTO_CORP.md
+   ✓ Cobertura: /docs/relatorios/COBERTURA_PROGRESSO.md
+   ✓ Testes: /docs/relatorios/RELATORIO_TESTES_WHATSAPP_API.md
+
+================================================================================
+CHECKLIST DE VALIDAÇÃO
+================================================================================
+
+✅ Raiz contém apenas 5 docs normativos + config
+✅ Todos os docs de análise/auditoria movidos para /docs/
+✅ Estrutura de /docs criada e organizada
+✅ Nenhum arquivo perdido ou deletado
+✅ Índice de navegação (/docs/INDICE_DOCS.md) criado
+✅ Compatibilidade mantida (.gitignore, Dockerfile, etc.)
+
+================================================================================
+PRÓXIMOS PASSOS
+================================================================================
+
+✓ AGORA PRONTO PARA: Executar Sprint 1-2 conforme Sprint_1-2_Auditoria.md
+

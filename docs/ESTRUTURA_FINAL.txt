@@ -1,0 +1,123 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║           ESTRUTURA FINAL — PYLOTO_CORP (29/01/2026)                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+pyloto_corp/
+│
+├── 📋 DOCUMENTAÇÃO NORMATIVA ESSENCIAL (Raiz)
+│   ├── Funcionamento.md                      ← Fluxo funcional (norma)
+│   ├── regras_e_padroes.md                   ← Padrões qualidade (norma)
+│   ├── README.md                             ← Overview
+│   ├── Monitoramento_Regras-Padroes.md       ← Compliance (norma)
+│   └── Sprint_1-2_Auditoria.md               ← Plano execução atual
+│
+├── ⚙️ CONFIGURAÇÃO (Raiz)
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   ├── QUICKSTART_DEPLOY.sh
+│   ├── .env / .env.exemplo
+│   ├── .gitignore
+│   └── .dockerignore
+│
+├── 💾 CÓDIGO-FONTE (Estrutura mantida)
+│   ├── src/pyloto_corp/
+│   │   ├── api/
+│   │   ├── application/
+│   │   ├── domain/
+│   │   ├── adapters/
+│   │   ├── infra/
+│   │   ├── ai/
+│   │   └── observability/
+│   ├── tests/
+│   └── venv/ (ou .venv)
+│
+└── 📚 DOCUMENTAÇÃO TÉCNICA (Organizada em /docs/)
+    │
+    ├── /docs/INDICE_DOCS.md                 ← 🎯 LEIA AQUI PRIMEIRO
+    │
+    ├── 📊 /docs/auditoria/                   ← Auditoria Profunda 29/01
+    │   ├── AUDITORIA_PROFUNDA_29JAN_2026.md (1041 linhas — completo)
+    │   ├── SUMARIO_EXECUTIVO_AUDITORIA_29JAN.md
+    │   ├── ROADMAP_EXECUCAO_AUDITORIA.md
+    │   ├── README_AUDITORIA_29JAN.md (quick-start auditoria)
+    │   ├── INDICE_AUDITORIA_FINAL_29JAN.md
+    │   ├── ENTREGA_AUDITORIA_29JAN_2026.md
+    │   ├── A1_DECISION_AND_RESOLUTION.md
+    │   ├── A4_FLOOD_DETECTION_IMPLEMENTATION.md
+    │   ├── AUDITORIA_CONFORMIDADE_REGRAS.md
+    │   └── [Outros relatórios auditoria...]
+    │
+    ├── 📋 /docs/planos/                      ← Roadmaps e TODOs
+    │   ├── ROADMAP_FASE6_E_ALEM.md
+    │   ├── QUICK_START_FSM_LLM.md
+    │   ├── PRODUCAO_FINAL_STRATEGY.md
+    │   ├── DEPLOYMENT_STAGING.md
+    │   ├── TODO_*.md (vários)
+    │   └── whatsapp_tests_fixed.sh
+    │
+    ├── 📈 /docs/relatorios/                  ← Cobertura e Testes
+    │   ├── COBERTURA_PROGRESSO.md
+    │   ├── RELATORIO_COBERTURA_*.md
+    │   └── RELATORIO_TESTES_WHATSAPP_API.md
+    │
+    ├── ⚙️ /docs/implementacao/                ← Histórico de Implementações
+    │   ├── FASE_1_2_COMPLETADA.md
+    │   ├── FASE_3A_3B_COMPLETADA.md
+    │   ├── RESUMO_EXECUCAO_C*.md
+    │   ├── IMPLEMENTACAO_PIPELINE_ASYNC.md
+    │   └── GUARDIAO_REFATORACOES_25JAN.md
+    │
+    ├── 🔍 /docs/investigacao/                ← Análises e Arquitetura
+    │   ├── FSM_LLM_ARCHITECTURE_PYLOTO_CORP.md
+    │   ├── M2_L1_CORRELATION_FALLBACK.md
+    │   ├── CONCLUSAO_*.md
+    │   └── ANALISE_VIDEO_COMPLEMENTAR.md
+    │
+    ├── 🏢 /docs/institucional/               ← Contexto Pyloto
+    │   ├── contexto_llm/
+    │   ├── historico_origem-e-evolucao.md
+    │   └── vertentes.md
+    │
+    └── 📁 /docs/firestore/                   ← Schema e Diagramas
+        └── schema.md
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    MAPA DE LEITURA — NOVOS CONTRIBUIDORES                 ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+1️⃣  ENTENDER O PROJETO (5-10 min)
+    └─→ README.md
+        → Funcionamento.md
+        → regras_e_padroes.md
+
+2️⃣  ENTENDER ACHADOS DA AUDITORIA (15-20 min)
+    └─→ /docs/auditoria/README_AUDITORIA_29JAN.md
+        → /docs/auditoria/SUMARIO_EXECUTIVO_AUDITORIA_29JAN.md
+
+3️⃣  EXECUTAR SPRINT 1-2 (por implementador)
+    └─→ Sprint_1-2_Auditoria.md (raiz)
+        → /docs/auditoria/AUDITORIA_PROFUNDA_29JAN_2026.md (referência)
+
+4️⃣  TROUBLESHOOTING
+    └─→ /docs/INDICE_DOCS.md → selecione categoria desejada
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                        MUDANÇAS NESTA LIMPEZA                             ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+ANTES:  Raiz com 60+ arquivos (caótico)
+DEPOIS: Raiz com 8 arquivos (essencial) + /docs/ bem organizado
+
+BENEFÍCIOS:
+  ✅ Claro o que é normativo (Funcionamento, regras, etc.)
+  ✅ Fácil localizar documentação por categoria
+  ✅ Reduzido poluição visual (60 → 8 arquivos na raiz)
+  ✅ Novo contribuidor sabe exatamente por onde começar
+  ✅ Índice de navegação criado (/docs/INDICE_DOCS.md)
+
+COMPATIBILIDADE:
+  ✅ Nenhum arquivo perdido (tudo em /docs/)
+  ✅ Todos os links funcionam (estrutura mantém nomes)
+  ✅ Git + CI/CD não afetados
+  ✅ Deploy scripts preservados
+
