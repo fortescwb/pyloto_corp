@@ -92,11 +92,43 @@ class WhatsAppInboundPipeline:
     - Persistência
     """
 
-    def __init__(self, config: PipelineConfig) -> None:
-        """Construtor canônico: recebe apenas um PipelineConfig.
+    def __init__(self, config: "PipelineConfig" | None = None, **kwargs) -> None:
+        """Construtor canônico: recebe um `PipelineConfig`.
 
-        Use `from_dependencies` se for necessário compatibilidade com a assinatura antiga.
+        Compatibilidade: aceita também a assinatura antiga via keywords (por ex.:
+        `dedupe_store=..., session_store=..., orchestrator=...`). Use `from_dependencies`
+        quando preferir clareza no código de chamada.
         """
+        # Aceita assinatura compatível com a versão antiga (kwargs)
+        if config is None:
+            # Extrair campos relevantes dos kwargs e construir PipelineConfig
+            from pyloto_corp.application.pipeline_config import PipelineConfig
+
+            config = PipelineConfig(
+                dedupe_store=kwargs.get("dedupe_store"),
+                session_store=kwargs.get("session_store"),
+                orchestrator=kwargs.get("orchestrator"),
+                flood_detector=kwargs.get("flood_detector"),
+                max_intent_limit=kwargs.get("max_intent_limit", 3),
+                state_selector_client=kwargs.get("state_selector_client"),
+                state_selector_model=kwargs.get("state_selector_model"),
+                state_selector_threshold=kwargs.get("state_selector_threshold", 0.7),
+                state_selector_enabled=kwargs.get("state_selector_enabled", True),
+                response_generator_client=kwargs.get("response_generator_client"),
+                response_generator_model=kwargs.get("response_generator_model"),
+                response_generator_enabled=kwargs.get("response_generator_enabled", True),
+                response_generator_timeout=kwargs.get("response_generator_timeout"),
+                response_generator_min_responses=kwargs.get("response_generator_min_responses", 3),
+                master_decider_client=kwargs.get("master_decider_client"),
+                master_decider_model=kwargs.get("master_decider_model"),
+                master_decider_enabled=kwargs.get("master_decider_enabled", True),
+                master_decider_timeout=kwargs.get("master_decider_timeout"),
+                master_decider_confidence_threshold=kwargs.get(
+                    "master_decider_confidence_threshold", 0.7
+                ),
+                decision_audit_store=kwargs.get("decision_audit_store"),
+            )
+
         self._dedupe = config.dedupe_store
         self._sessions = config.session_store
         self._orchestrator = config.orchestrator
@@ -374,12 +406,47 @@ class WhatsAppInboundPipeline:
             message, session=session, is_duplicate=False
         )
 
+
+
         if ai_response.intent:
             session.intent_queue.add_intent(
                 ai_response.intent, confidence=ai_response.confidence
             )
 
         session.outcome = ai_response.outcome or Outcome.AWAITING_USER
+
+        ai_response = self._orchestrator.process_message(
+            message, session=session, is_duplicate=False
+        )
+
+        if ai_response.intent:
+            session.intent_queue.add_intent(
+                ai_response.intent, confidence=ai_response.confidence
+            )
+
+        session.outcome = ai_response.outcome or Outcome.AWAITING_USER
+
+        # Registrar recebimento e persistir sessão (append antes do save)
+        try:
+            from pyloto_corp.application.session_helpers import (
+                append_received_event,
+                is_first_message_of_day,
+            )
+            from pyloto_corp.domain.constants.otto import OTTO_INTRO_TEXT
+
+            had_any_received = any(rec.get("received_at") for rec in session.message_history)
+            is_first = (not had_any_received) or is_first_message_of_day(
+                session, getattr(message, "timestamp", None)
+            )
+
+            try:
+                append_received_event(session, getattr(message, "timestamp", None))
+            except Exception:
+                # Não falhar o fluxo por problema de append
+                logger.warning("failed_to_append_received_event")
+        except Exception:  # pragma: no cover - segurança
+            is_first = False
+            OTTO_INTRO_TEXT = None
 
         try:
             self._sessions.save(session)
@@ -388,6 +455,25 @@ class WhatsAppInboundPipeline:
                 "Failed to save session",
                 extra={"session_id": session.session_id[:8], "error": str(e)},
             )
+
+        # Aplicar prefixo do Otto no texto final (após persistir sessão)
+        try:
+            if is_first and OTTO_INTRO_TEXT:
+                def _prefix(text: str | None) -> str | None:
+                    if not text:
+                        return None
+                    if text.strip().startswith(OTTO_INTRO_TEXT):
+                        return text
+                    return f"{OTTO_INTRO_TEXT}\n\n{text}"
+
+                new_reply = _prefix(ai_response.reply_text)
+
+                if new_reply is not None:
+                    ai_response.reply_text = new_reply
+                # Não prefixar `master_decision.selected_response_text` para preservar
+                # contratos de seleção (controle explícito pelo decider).
+        except Exception:  # pragma: no cover - segurança
+            logger.exception("otto_prefix_application_failed")
 
         outcome = session.outcome
         logger.info(

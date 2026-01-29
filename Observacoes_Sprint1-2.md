@@ -38,3 +38,86 @@
 Esses pontos são de **verificação**, não bloqueiam a PR-01 (ela cumpriu objetivo), mas ajudam a evitar “drift” até o final da Sprint 1–2.
 
 ---
+
+## Pontos de revisão referentes à PR-02
+
+### Seção — PR-02: PipelineConfig (18 parâmetros → 1)
+
+Abaixo estão as **observações e pontos de atenção** que devem ser **verificados ao final da Sprint 1–2**, especificamente sobre a PR-02.
+
+### 1) Compatibilidade real de inicialização do pipeline
+
+* Confirmar que **todos os entrypoints reais** (handlers HTTP, workers, Cloud Tasks, testes de integração) continuam inicializando o pipeline **sem alteração de assinatura percebida**.
+* Verificar que **nenhum ponto externo** ainda tenta instanciar diretamente o construtor antigo sem passar pelo `from_dependencies`.
+
+**Motivo:**
+A compatibilidade foi garantida via *classmethod shim*, mas isso precisa ser validado no fluxo real completo, não apenas em testes unitários.
+
+---
+
+### 2) PipelineConfig como DTO puro (não virar “service locator”)
+
+* Garantir que `PipelineConfig` permaneça:
+
+  * imutável (`frozen=True`)
+  * sem lógica
+  * sem side effects
+* Evitar, nas próximas PRs, adicionar métodos ou lógica dentro do config.
+
+**Motivo (Regra 2.3 — SRP):**
+Config é **dados**, não comportamento. Qualquer lógica adicionada aqui cria acoplamento oculto.
+
+---
+
+### 3) Consistência entre pipelines paralelos (até Sprint 2 acabar)
+
+* Confirmar que:
+
+  * `pipeline.py`
+  * `pipeline_async.py`
+  * `pipeline_v2.py`
+    usam **exatamente o mesmo padrão de construção** (config + shim), mesmo que ainda existam em paralelo.
+
+**Motivo:**
+Antes da consolidação (Sprint 2), divergências aqui geram bugs difíceis de rastrear.
+
+---
+
+### 4) Tipagem e TYPE_CHECKING
+
+* Revisar no final da Sprint 1–2:
+
+  * se `TYPE_CHECKING` continua sendo usado apenas para **typing**
+  * se nenhum import “inocente” virou runtime import acidental
+
+**Motivo:**
+Esse é o ponto mais comum onde boundaries quebram silenciosamente.
+
+---
+
+### 5) Factory futura (nota arquitetural, não ação)
+
+* Registrar explicitamente que:
+
+  * `PipelineConfig` **não deve** ser instanciado em handlers
+  * A criação centralizada ficará para a **PR-05 (factory)**
+
+**Motivo:**
+Evita que o time comece a criar configs “na mão” em vários lugares.
+
+---
+
+### 6) Métrica de sucesso da PR-02
+
+Ao final da Sprint 1–2, considerar a PR-02 **100% validada** se:
+
+* nenhum pipeline recebe mais de **1 argumento**
+* não há regressão de testes
+* não há dependência infra → application reintroduzida
+* o fluxo WhatsApp funciona sem alteração perceptível
+
+---
+
+Esses pontos **não bloqueiam** a PR-02 (ela está correta), mas **blindam** a sprint contra regressões silenciosas.
+
+---
