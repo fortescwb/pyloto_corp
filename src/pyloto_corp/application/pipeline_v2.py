@@ -43,8 +43,7 @@ from pyloto_corp.observability.logging import get_logger
 from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
-    from pyloto_corp.infra.dedupe import DedupeStore
-    from pyloto_corp.infra.session_store import SessionStore
+    from pyloto_corp.domain.protocols import DedupeProtocol, SessionStoreProtocol
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -78,8 +77,8 @@ class PipelineV2:
 
     def __init__(
         self,
-        dedupe_store: DedupeStore,
-        session_store: SessionStore,
+        dedupe_store: DedupeProtocol,
+        session_store: SessionStoreProtocol,
         flood_detector: FloodDetector | None = None,
         max_intent_limit: int = 3,
     ) -> None:

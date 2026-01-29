@@ -13,8 +13,6 @@ from pyloto_corp.adapters.whatsapp.normalizer import extract_messages
 from pyloto_corp.adapters.whatsapp.outbound import WhatsAppOutboundClient
 from pyloto_corp.config.settings import Settings
 from pyloto_corp.domain.outbound_dedup import OutboundDedupeStore
-from pyloto_corp.infra.cloud_tasks import CloudTaskDispatchError, CloudTasksDispatcher
-from pyloto_corp.infra.http import HttpError
 from pyloto_corp.observability.logging import get_logger
 
 logger = get_logger(__name__)
@@ -82,7 +80,7 @@ async def handle_inbound_task(
     payload: dict[str, Any],
     inbound_event_id: str,
     correlation_id: str | None,
-    tasks_dispatcher: CloudTasksDispatcher,
+    tasks_dispatcher: Any,
 ) -> dict[str, int | str]:
     """Processa payload inbound e enfileira mensagens outbound via Cloud Tasks."""
     messages = extract_messages(payload)
@@ -108,7 +106,8 @@ async def handle_inbound_task(
             task_meta = await tasks_dispatcher.enqueue_outbound(outbound_job)
             outbound_tasks.append(task_meta.name)
             enqueued += 1
-        except CloudTaskDispatchError as exc:
+        except Exception as exc:
+            # Falha na enfileiração: tratamos como 503 (fail-closed)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="enqueue_outbound_failed",
@@ -179,8 +178,9 @@ async def handle_outbound_task(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="invalid_outbound_config",
         ) from exc
-    except HttpError as exc:
-        if exc.is_retryable:
+    except Exception as exc:
+        # Tratamos HttpError-like exceptions generically sem importar infra types
+        if getattr(exc, "is_retryable", False):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="whatsapp_retryable_error",

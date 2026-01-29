@@ -6,9 +6,10 @@ Separado para manter SRP e permitir reuso entre implementações.
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import TYPE_CHECKING
 
+from pyloto_corp.domain.protocols.session_store import SessionStoreProtocol
 from pyloto_corp.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -23,7 +24,7 @@ class SessionStoreError(Exception):
     pass
 
 
-class SessionStore(ABC):
+class SessionStore(SessionStoreProtocol):
     """Contrato abstrato para armazenamento de SessionState."""
 
     @abstractmethod

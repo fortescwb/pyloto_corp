@@ -44,8 +44,11 @@ from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
     from pyloto_corp.ai.orchestrator import AIOrchestrator
-    from pyloto_corp.infra.dedupe import DedupeStore
-    from pyloto_corp.infra.session_store import SessionStore
+    from pyloto_corp.domain.protocols import (
+        DecisionAuditStoreProtocol,
+        DedupeProtocol,
+        SessionStoreProtocol,
+    )
 
 logger: logging.Logger = get_logger(__name__)
 
@@ -90,8 +93,8 @@ class WhatsAppInboundPipeline:
 
     def __init__(
         self,
-        dedupe_store: DedupeStore,
-        session_store: SessionStore,
+        dedupe_store: DedupeProtocol,
+        session_store: SessionStoreProtocol,
         orchestrator: AIOrchestrator,
         flood_detector: FloodDetector | None = None,
         max_intent_limit: int = 3,
@@ -109,7 +112,7 @@ class WhatsAppInboundPipeline:
         master_decider_enabled: bool = True,
         master_decider_timeout: float | None = None,
         master_decider_confidence_threshold: float = 0.7,
-        decision_audit_store: Any | None = None,
+        decision_audit_store: DecisionAuditStoreProtocol | None = None,
     ) -> None:
         self._dedupe = dedupe_store
         self._sessions = session_store
@@ -436,8 +439,8 @@ class WhatsAppInboundPipeline:
 
 def process_whatsapp_webhook(
     payload: dict[str, Any],
-    dedupe_store: DedupeStore,
-    session_store: SessionStore,
+    dedupe_store: DedupeProtocol,
+    session_store: SessionStoreProtocol,
     orchestrator: AIOrchestrator,
     flood_detector: FloodDetector | None = None,
 ) -> PipelineResult:

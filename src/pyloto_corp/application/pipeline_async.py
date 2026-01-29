@@ -49,8 +49,7 @@ from pyloto_corp.observability.logging import get_logger
 from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
-    from pyloto_corp.infra.dedupe import DedupeStore
-    from pyloto_corp.infra.session_contract_async import AsyncSessionStore
+    from pyloto_corp.domain.protocols import AsyncSessionStoreProtocol, DedupeProtocol
 
 logger: logging.Logger = get_logger(__name__)
 settings = get_settings()
@@ -61,8 +60,8 @@ class PipelineAsyncV3:
 
     def __init__(
         self,
-        dedupe_store: DedupeStore,
-        async_session_store: AsyncSessionStore,
+        dedupe_store: DedupeProtocol,
+        async_session_store: AsyncSessionStoreProtocol,
         flood_detector: FloodDetector | None = None,
         max_intent_limit: int = 3,
     ) -> None:

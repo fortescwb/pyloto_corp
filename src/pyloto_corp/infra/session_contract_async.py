@@ -7,9 +7,10 @@ Permite persistência não-bloqueante em Firestore, Redis, etc.
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import TYPE_CHECKING
 
+from pyloto_corp.domain.protocols.session_store import AsyncSessionStoreProtocol
 from pyloto_corp.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ class AsyncSessionStoreError(Exception):
     pass
 
 
-class AsyncSessionStore(ABC):
+class AsyncSessionStore(AsyncSessionStoreProtocol):
     """Contrato abstrato para armazenamento assíncrono de SessionState."""
 
     @abstractmethod

@@ -7,12 +7,13 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
+from pyloto_corp.domain.protocols.decision_audit_store import DecisionAuditStoreProtocol
 from pyloto_corp.observability.logging import get_logger
 
 logger = get_logger(__name__)
 
 
-class DecisionAuditStore:
+class DecisionAuditStore(DecisionAuditStoreProtocol):
     """Contrato de auditoria."""
 
     def append(self, record: dict[str, Any]) -> None:  # pragma: no cover - interface
