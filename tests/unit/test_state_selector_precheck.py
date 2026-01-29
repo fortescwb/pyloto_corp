@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pyloto_corp.application.response_generator import _deterministic_fallback  # noqa: F401
 from pyloto_corp.application.state_selector import select_next_state
 from pyloto_corp.domain.conversation_state import (
     ConversationState,

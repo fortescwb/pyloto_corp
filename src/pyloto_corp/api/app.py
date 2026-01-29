@@ -8,6 +8,7 @@ from pyloto_corp.ai.orchestrator import AIOrchestrator
 from pyloto_corp.api.routes import router
 from pyloto_corp.config.settings import Settings, get_settings
 from pyloto_corp.infra.cloud_tasks import CloudTasksDispatcher, LocalCloudTasksClient
+from pyloto_corp.infra.decision_audit_store import create_decision_audit_store
 from pyloto_corp.infra.dedupe import create_dedupe_store
 from pyloto_corp.infra.flood_detector_factory import create_flood_detector_from_settings
 from pyloto_corp.infra.inbound_processing_log import create_inbound_log_store
@@ -112,6 +113,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     validation_errors.extend(settings.validate_inbound_log_backend())
     validation_errors.extend(settings.validate_queue_config())
     validation_errors.extend(settings.validate_state_selector())
+    validation_errors.extend(settings.validate_response_generator())
+    validation_errors.extend(settings.validate_master_decider())
 
     if validation_errors:
         error_msg = "; ".join(validation_errors)
@@ -168,6 +171,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.state.inbound_log_store = create_inbound_log_store(
         settings, redis_client=redis_client, firestore_client=firestore_client
+    )
+    app.state.decision_audit_store = create_decision_audit_store(
+        settings, firestore_client=firestore_client
     )
 
     return app

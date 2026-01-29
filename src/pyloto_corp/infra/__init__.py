@@ -17,6 +17,12 @@ Conforme regras_e_padroes.md:
 - Logs estruturados sem PII
 """
 
+from pyloto_corp.infra.decision_audit_store import (
+    DecisionAuditStore,
+    FirestoreDecisionAuditStore,
+    MemoryDecisionAuditStore,
+    create_decision_audit_store,
+)
 from pyloto_corp.infra.dedupe import (
     DedupeError,
     DedupeStore,
@@ -75,6 +81,11 @@ __all__ = [
     "HttpClientConfig",
     "HttpError",
     "create_http_client",
+    # Decision audit
+    "DecisionAuditStore",
+    "MemoryDecisionAuditStore",
+    "FirestoreDecisionAuditStore",
+    "create_decision_audit_store",
     # Inbound processing log
     "InboundProcessingLogStore",
     "MemoryInboundProcessingLogStore",

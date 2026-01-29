@@ -137,6 +137,19 @@ class Settings(BaseSettings):
     state_selector_model: str | None = None
     state_selector_confidence_threshold: float = 0.7
 
+    # Response generator (fase 2B)
+    response_generator_enabled: bool = True
+    response_generator_model: str | None = None
+    response_generator_timeout_seconds: float | None = None
+    response_generator_min_responses: int = 3
+
+    # Master decider (LLM3)
+    master_decider_enabled: bool = True
+    master_decider_model: str | None = None
+    master_decider_timeout_seconds: float | None = None
+    master_decider_confidence_threshold: float = 0.7
+    decision_audit_backend: str = "memory"  # memory | firestore
+
     # Observabilidade
     log_format: str = "json"  # json | text
     correlation_id_header: str = "X-Correlation-ID"
@@ -299,6 +312,29 @@ class Settings(BaseSettings):
         errors: list[str] = []
         if not 0 < self.state_selector_confidence_threshold <= 1:
             errors.append("STATE_SELECTOR_CONFIDENCE_THRESHOLD deve estar entre 0 e 1")
+        return errors
+
+    def validate_response_generator(self) -> list[str]:
+        """Valida configuração do gerador de respostas."""
+        errors: list[str] = []
+        if self.response_generator_min_responses < 3:
+            errors.append("RESPONSE_GENERATOR_MIN_RESPONSES deve ser >= 3")
+        return errors
+
+    def validate_master_decider(self) -> list[str]:
+        """Valida configuração do decisor mestre."""
+        errors: list[str] = []
+        if not 0 < self.master_decider_confidence_threshold <= 1:
+            errors.append("MASTER_DECIDER_CONFIDENCE_THRESHOLD deve estar entre 0 e 1")
+        backend = self.decision_audit_backend.lower()
+        if backend not in {"memory", "firestore"}:
+            errors.append("DECISION_AUDIT_BACKEND inválido: use memory|firestore")
+        if (self.is_staging or self.is_production) and backend == "memory":
+            errors.append("DECISION_AUDIT_BACKEND=memory proibido em staging/production")
+        if self.master_decider_enabled and backend == "firestore" and not (
+            self.firestore_project_id or self.gcp_project
+        ):
+            errors.append("Decision audit firestore requer FIRESTORE_PROJECT_ID ou GCP_PROJECT")
         return errors
 
     def validate_inbound_log_backend(self) -> list[str]:

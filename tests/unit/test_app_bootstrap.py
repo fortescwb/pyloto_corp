@@ -43,6 +43,7 @@ class TestAppBootstrapSessionStore:
             dedupe_backend="redis",
             outbound_dedupe_backend="redis",
             inbound_log_backend="redis",
+            decision_audit_backend="firestore",
         )
         # Mock no local onde são usados (pyloto_corp.api.app)
         with (
@@ -54,6 +55,7 @@ class TestAppBootstrapSessionStore:
                 return_value=mock_flood_detector,
             ),
             patch("pyloto_corp.api.app._create_tasks_dispatcher", return_value=MagicMock()),
+            patch("pyloto_corp.api.app.create_decision_audit_store", return_value=MagicMock()),
         ):
             app = create_app(settings)
             assert app is not None

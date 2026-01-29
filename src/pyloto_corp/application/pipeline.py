@@ -23,19 +23,22 @@ from typing import TYPE_CHECKING, Any
 
 from pyloto_corp.adapters.whatsapp.models import WebhookProcessingSummary
 from pyloto_corp.adapters.whatsapp.normalizer import extract_messages
+from pyloto_corp.application.master_decider import decide_master
+from pyloto_corp.application.response_generator import generate_response_options
 from pyloto_corp.application.session import SessionState
 from pyloto_corp.application.state_selector import select_next_state
-from pyloto_corp.domain.abuse_detection import (
-    AbuseChecker,
-    FloodDetector,
-    SpamDetector,
-)
+from pyloto_corp.domain.abuse_detection import AbuseChecker, FloodDetector, SpamDetector
 from pyloto_corp.domain.conversation_state import (
     ConversationState,
     StateSelectorInput,
     StateSelectorOutput,
 )
-from pyloto_corp.domain.enums import Outcome
+from pyloto_corp.domain.enums import MessageType, Outcome
+from pyloto_corp.domain.master_decision import MasterDecisionOutput
+from pyloto_corp.domain.response_generator import (
+    ResponseGeneratorInput,
+    ResponseGeneratorOutput,
+)
 from pyloto_corp.observability.logging import get_logger
 from pyloto_corp.utils.ids import new_session_id
 
@@ -57,6 +60,13 @@ class ProcessedMessage:
     outcome: Outcome
     reply_text: str | None = None
     state_decision: StateSelectorOutput | None = None
+    response_options: ResponseGeneratorOutput | None = None
+    master_decision: MasterDecisionOutput | None = None
+    final_state: ConversationState | None = None
+    selected_response_text: str | None = None
+    message_type: MessageType | None = None
+    overall_confidence: float | None = None
+    decision_reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -89,6 +99,17 @@ class WhatsAppInboundPipeline:
         state_selector_model: str | None = None,
         state_selector_threshold: float = 0.7,
         state_selector_enabled: bool = True,
+        response_generator_client: Any | None = None,
+        response_generator_model: str | None = None,
+        response_generator_enabled: bool = True,
+        response_generator_timeout: float | None = None,
+        response_generator_min_responses: int = 3,
+        master_decider_client: Any | None = None,
+        master_decider_model: str | None = None,
+        master_decider_enabled: bool = True,
+        master_decider_timeout: float | None = None,
+        master_decider_confidence_threshold: float = 0.7,
+        decision_audit_store: Any | None = None,
     ) -> None:
         self._dedupe = dedupe_store
         self._sessions = session_store
@@ -101,6 +122,17 @@ class WhatsAppInboundPipeline:
         self._state_selector_model = state_selector_model
         self._state_selector_threshold = state_selector_threshold
         self._state_selector_enabled = state_selector_enabled
+        self._response_generator_client = response_generator_client
+        self._response_generator_model = response_generator_model
+        self._response_generator_enabled = response_generator_enabled
+        self._response_generator_timeout = response_generator_timeout
+        self._response_generator_min_responses = response_generator_min_responses
+        self._master_decider_client = master_decider_client
+        self._master_decider_model = master_decider_model
+        self._master_decider_enabled = master_decider_enabled
+        self._master_decider_timeout = master_decider_timeout
+        self._master_decider_confidence_threshold = master_decider_confidence_threshold
+        self._decision_audit_store = decision_audit_store
 
     def process_webhook(
         self, payload: dict[str, Any], sender_phone: str | None = None
@@ -204,6 +236,7 @@ class WhatsAppInboundPipeline:
     ) -> ProcessedMessage:
         """Orquestra IA, atualiza e persiste sessão."""
         state_decision: StateSelectorOutput | None = None
+        response_options: ResponseGeneratorOutput | None = None
 
         if self._state_selector_enabled:
             selector_input = StateSelectorInput(
@@ -231,6 +264,73 @@ class WhatsAppInboundPipeline:
                 session.message_history.append(
                     {"summary": "state_hint", "hint": state_decision.response_hint}
                 )
+
+        if self._response_generator_enabled and state_decision:
+            rg_input = ResponseGeneratorInput(
+                last_user_message=message.text or "",
+                day_history=session.message_history,
+                state_decision=state_decision,
+                current_state=ConversationState(session.current_state),
+                candidate_next_state=state_decision.selected_state,
+                confidence=state_decision.confidence,
+                response_hint=state_decision.response_hint,
+            )
+            response_options = generate_response_options(
+                rg_input,
+                self._response_generator_client,
+                correlation_id=message.message_id,
+                model=self._response_generator_model,
+                timeout_seconds=self._response_generator_timeout,
+                min_responses=self._response_generator_min_responses,
+            )
+
+        master_decision: MasterDecisionOutput | None = None
+        if self._master_decider_enabled and state_decision and response_options:
+            from pyloto_corp.domain.master_decision import MasterDecisionInput
+
+            md_input = MasterDecisionInput(
+                last_user_message=message.text or "",
+                day_history=session.message_history,
+                state_decision=state_decision,
+                response_options=response_options,
+                current_state=ConversationState(session.current_state),
+                correlation_id=message.message_id,
+            )
+            master_decision = decide_master(
+                md_input,
+                self._master_decider_client,
+                correlation_id=message.message_id,
+                model=self._master_decider_model,
+                timeout_seconds=self._master_decider_timeout,
+                confidence_threshold=self._master_decider_confidence_threshold,
+            )
+            if master_decision.apply_state:
+                session.current_state = master_decision.final_state.value
+            if self._decision_audit_store:
+                try:
+                    self._decision_audit_store.append(
+                        {
+                            "timestamp": getattr(message, "timestamp", None),
+                            "correlation_id": message.message_id,
+                            "final_state": master_decision.final_state.value,
+                            "apply_state": master_decision.apply_state,
+                            "selected_response_index": master_decision.selected_response_index,
+                            "message_type": master_decision.message_type.value,
+                            "overall_confidence": master_decision.overall_confidence,
+                            "reason": master_decision.reason,
+                            "llm1": {
+                                "status": state_decision.status.value,
+                                "confidence": state_decision.confidence,
+                                "next_state": state_decision.next_state.value,
+                            },
+                            "responses_fingerprint": hash(tuple(response_options.responses)),
+                        }
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "decision_audit_append_failed",
+                        extra={"error": str(exc), "correlation_id": message.message_id},
+                    )
 
         ai_response = self._orchestrator.process_message(
             message, session=session, is_duplicate=False
@@ -263,6 +363,15 @@ class WhatsAppInboundPipeline:
             outcome=outcome,
             reply_text=ai_response.reply_text,
             state_decision=state_decision,
+            response_options=response_options,
+            master_decision=master_decision,
+            final_state=master_decision.final_state if master_decision else None,
+            selected_response_text=(
+                master_decision.selected_response_text if master_decision else None
+            ),
+            message_type=master_decision.message_type if master_decision else None,
+            overall_confidence=master_decision.overall_confidence if master_decision else None,
+            decision_reason=master_decision.reason if master_decision else None,
         )
 
     def _build_result(
