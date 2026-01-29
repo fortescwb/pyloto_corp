@@ -44,6 +44,7 @@ from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
     from pyloto_corp.ai.orchestrator import AIOrchestrator
+    from pyloto_corp.application.pipeline_config import PipelineConfig
     from pyloto_corp.domain.protocols import (
         DecisionAuditStoreProtocol,
         DedupeProtocol,
@@ -91,8 +92,37 @@ class WhatsAppInboundPipeline:
     - Persistência
     """
 
-    def __init__(
-        self,
+    def __init__(self, config: PipelineConfig) -> None:
+        """Construtor canônico: recebe apenas um PipelineConfig.
+
+        Use `from_dependencies` se for necessário compatibilidade com a assinatura antiga.
+        """
+        self._dedupe = config.dedupe_store
+        self._sessions = config.session_store
+        self._orchestrator = config.orchestrator
+        self._flood = config.flood_detector
+        self._max_intents = config.max_intent_limit
+        self._spam = SpamDetector()
+        self._abuse_checker = AbuseChecker(max_intents_exceeded=config.max_intent_limit)
+        self._state_selector_client = config.state_selector_client
+        self._state_selector_model = config.state_selector_model
+        self._state_selector_threshold = config.state_selector_threshold
+        self._state_selector_enabled = config.state_selector_enabled
+        self._response_generator_client = config.response_generator_client
+        self._response_generator_model = config.response_generator_model
+        self._response_generator_enabled = config.response_generator_enabled
+        self._response_generator_timeout = config.response_generator_timeout
+        self._response_generator_min_responses = config.response_generator_min_responses
+        self._master_decider_client = config.master_decider_client
+        self._master_decider_model = config.master_decider_model
+        self._master_decider_enabled = config.master_decider_enabled
+        self._master_decider_timeout = config.master_decider_timeout
+        self._master_decider_confidence_threshold = config.master_decider_confidence_threshold
+        self._decision_audit_store = config.decision_audit_store
+
+    @classmethod
+    def from_dependencies(
+        cls,
         dedupe_store: DedupeProtocol,
         session_store: SessionStoreProtocol,
         orchestrator: AIOrchestrator,
@@ -113,29 +143,34 @@ class WhatsAppInboundPipeline:
         master_decider_timeout: float | None = None,
         master_decider_confidence_threshold: float = 0.7,
         decision_audit_store: DecisionAuditStoreProtocol | None = None,
-    ) -> None:
-        self._dedupe = dedupe_store
-        self._sessions = session_store
-        self._orchestrator = orchestrator
-        self._flood = flood_detector
-        self._max_intents = max_intent_limit
-        self._spam = SpamDetector()
-        self._abuse_checker = AbuseChecker(max_intents_exceeded=max_intent_limit)
-        self._state_selector_client = state_selector_client
-        self._state_selector_model = state_selector_model
-        self._state_selector_threshold = state_selector_threshold
-        self._state_selector_enabled = state_selector_enabled
-        self._response_generator_client = response_generator_client
-        self._response_generator_model = response_generator_model
-        self._response_generator_enabled = response_generator_enabled
-        self._response_generator_timeout = response_generator_timeout
-        self._response_generator_min_responses = response_generator_min_responses
-        self._master_decider_client = master_decider_client
-        self._master_decider_model = master_decider_model
-        self._master_decider_enabled = master_decider_enabled
-        self._master_decider_timeout = master_decider_timeout
-        self._master_decider_confidence_threshold = master_decider_confidence_threshold
-        self._decision_audit_store = decision_audit_store
+    ) -> WhatsAppInboundPipeline:
+        """Compatibilidade retroativa: cria Pipeline a partir da assinatura antiga."""
+        from pyloto_corp.application.pipeline_config import PipelineConfig
+
+        config = PipelineConfig(
+            dedupe_store=dedupe_store,
+            session_store=session_store,
+            orchestrator=orchestrator,
+            flood_detector=flood_detector,
+            max_intent_limit=max_intent_limit,
+            state_selector_client=state_selector_client,
+            state_selector_model=state_selector_model,
+            state_selector_threshold=state_selector_threshold,
+            state_selector_enabled=state_selector_enabled,
+            response_generator_client=response_generator_client,
+            response_generator_model=response_generator_model,
+            response_generator_enabled=response_generator_enabled,
+            response_generator_timeout=response_generator_timeout,
+            response_generator_min_responses=response_generator_min_responses,
+            master_decider_client=master_decider_client,
+            master_decider_model=master_decider_model,
+            master_decider_enabled=master_decider_enabled,
+            master_decider_timeout=master_decider_timeout,
+            master_decider_confidence_threshold=master_decider_confidence_threshold,
+            decision_audit_store=decision_audit_store,
+        )
+        return cls(config)
+
 
     def process_webhook(
         self, payload: dict[str, Any], sender_phone: str | None = None
@@ -456,7 +491,7 @@ def process_whatsapp_webhook(
     Returns:
         PipelineResult com resumo e detalhes
     """
-    pipeline = WhatsAppInboundPipeline(
+    pipeline = WhatsAppInboundPipeline.from_dependencies(
         dedupe_store=dedupe_store,
         session_store=session_store,
         orchestrator=orchestrator,
