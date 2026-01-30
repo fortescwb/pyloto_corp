@@ -358,17 +358,25 @@ def _create_redis_store(settings: Settings) -> DedupeStore:
 
     fail_closed = settings.is_production or settings.is_staging
 
+    # Namespacing forte para evitar colisões quando o mesmo Redis é compartilhado
+    # entre serviços/ambientes. Não inclui PII; phone_number_id é identificador técnico.
+    env = (settings.environment or "development").lower()
+    phone_number_id = settings.whatsapp_phone_number_id or "unknown_phone"
+    key_prefix = f"pyloto_corp:{env}:{phone_number_id}:dedupe:"
+
     logger.info(
         "Usando RedisDedupeStore",
         extra={
             "ttl_seconds": settings.dedupe_ttl_seconds,
             "fail_closed": fail_closed,
+            "key_prefix": key_prefix,
         },
     )
     return RedisDedupeStore(
         redis_url=settings.redis_url,
         ttl_seconds=settings.dedupe_ttl_seconds,
         fail_closed=fail_closed,
+        key_prefix=key_prefix,
     )
 
 

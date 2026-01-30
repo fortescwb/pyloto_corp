@@ -8,9 +8,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from pyloto_corp.adapters.whatsapp.signature import verify_meta_signature
+from pyloto_corp.ai.orchestrator import AIOrchestrator
 from pyloto_corp.api.dependencies import (
     get_dedupe_store,
     get_inbound_log_store,
+    get_orchestrator,
     get_outbound_dedupe_store,
     get_settings,
     get_tasks_dispatcher,
@@ -233,6 +235,7 @@ async def _run_inbound_with_rastro(
     task_name: str | None,
     tasks_dispatcher: CloudTasksDispatcher,
     inbound_log_store: InboundProcessingLogStore,
+    orchestrator: AIOrchestrator,
 ) -> dict[str, Any]:
     """Executa worker inbound com rastro persistente."""
     _mark_inbound_started(inbound_log_store, inbound_event_id, correlation_id, task_name)
@@ -243,6 +246,7 @@ async def _run_inbound_with_rastro(
             inbound_event_id=inbound_event_id,
             correlation_id=correlation_id,
             tasks_dispatcher=tasks_dispatcher,
+            orchestrator=orchestrator,
         )
         return _handle_inbound_success(
             inbound_log_store,
@@ -331,6 +335,7 @@ async def process_inbound(
     settings: Settings = Depends(get_settings),
     tasks_dispatcher: CloudTasksDispatcher = Depends(get_tasks_dispatcher),
     inbound_log_store: InboundProcessingLogStore = Depends(get_inbound_log_store),
+    orchestrator: AIOrchestrator = Depends(get_orchestrator),
 ) -> dict[str, Any]:
     """Processa task inbound e enfileira outbound."""
     require_internal_token(request, settings)
@@ -358,6 +363,7 @@ async def process_inbound(
         task_name=task_name,
         tasks_dispatcher=tasks_dispatcher,
         inbound_log_store=inbound_log_store,
+        orchestrator=orchestrator,
     )
 
 

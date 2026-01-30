@@ -115,6 +115,14 @@ class PipelineAsyncV3:
         total_deduped = 0
         total_processed = 0
 
+        logger.debug(
+            "webhook_messages_extracted",
+            extra={
+                "total_received": total_received,
+                "payload_keys": list(payload.keys()) if payload else [],
+            },
+        )
+
         tasks = []
         for msg in messages:
             if self._dedupe_check(msg):

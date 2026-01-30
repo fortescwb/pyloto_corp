@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from openai import APIError, APITimeoutError, AsyncOpenAI
+from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
 
 from pyloto_corp.ai import openai_parser, openai_prompts
 from pyloto_corp.ai.contracts.event_detection import EventDetectionResult
@@ -37,10 +37,15 @@ class OpenAIClientManager:
 
     def __init__(self, api_key: str | None = None) -> None:
         """Inicializa cliente OpenAI."""
-        self._client = AsyncOpenAI(api_key=api_key)
         self._model = "gpt-4o-mini"
-        self._timeout = 10.0
-        self._max_retries = 2
+        self._timeout = 15.0
+        self._max_retries = 3
+        # Configurar timeout e retry no cliente (não só nas chamadas)
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            timeout=self._timeout,
+            max_retries=self._max_retries,
+        )
 
     async def detect_event(
         self,
@@ -68,7 +73,7 @@ class OpenAIClientManager:
             result_text = response.choices[0].message.content or ""
             return openai_parser.parse_event_detection_response(result_text)
 
-        except (APIError, APITimeoutError) as e:
+        except (APIConnectionError, APIError, APITimeoutError) as e:
             log_fallback(
                 logger,
                 "event_detection",
@@ -104,7 +109,7 @@ class OpenAIClientManager:
             result_text = response.choices[0].message.content or ""
             return openai_parser.parse_response_generation_response(result_text)
 
-        except (APIError, APITimeoutError) as e:
+        except (APIConnectionError, APIError, APITimeoutError) as e:
             log_fallback(
                 logger,
                 "response_generation",
@@ -138,7 +143,7 @@ class OpenAIClientManager:
             result_text = response.choices[0].message.content or ""
             return openai_parser.parse_message_type_response(result_text)
 
-        except (APIError, APITimeoutError) as e:
+        except (APIConnectionError, APIError, APITimeoutError) as e:
             log_fallback(
                 logger,
                 "message_type_selection",

@@ -31,8 +31,16 @@ from pyloto_corp.api.dependencies import (
     get_dedupe_store,
     get_flood_detector,
     get_message_queue,
+    get_orchestrator,
+    get_outbound_dedupe_store,
     get_session_store,
     get_settings,
+    get_tasks_dispatcher,
+)
+from pyloto_corp.application.whatsapp_async import (
+    compute_inbound_event_id,
+    handle_inbound_task,
+    handle_outbound_task,
 )
 from pyloto_corp.config.settings import Settings
 from pyloto_corp.observability.logging import get_logger
@@ -46,6 +54,28 @@ import traceback
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+def _extract_status_summaries(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extrai resumos de status do webhook (sem PII)."""
+    summaries: list[dict[str, Any]] = []
+    for entry in payload.get("entry", []) or []:
+        for change in entry.get("changes", []) or []:
+            value = change.get("value", {})
+            for status_event in value.get("statuses", []) or []:
+                status_summary = {
+                    "status": status_event.get("status"),
+                    "errors": [],
+                }
+                for err in status_event.get("errors", []) or []:
+                    status_summary["errors"].append(
+                        {
+                            "code": err.get("code"),
+                            "title": err.get("title"),
+                        }
+                    )
+                summaries.append(status_summary)
+    return summaries
 
 
 @router.get("/health")
@@ -115,9 +145,30 @@ async def whatsapp_webhook_async(
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_json") from exc
 
-    # **ENFILEIRAMENTO**: Não processa aqui, apenas enfileira
+    status_summaries = _extract_status_summaries(payload)
+    if status_summaries:
+        logger.info(
+            "webhook_status_event",
+            extra={
+                "count": len(status_summaries),
+                "statuses": status_summaries[:3],
+            },
+        )
+
+    # Obter correlation_id do contexto
+    from pyloto_corp.observability.logging import get_correlation_id
+
+    correlation_id = get_correlation_id()
+
+    # **ENFILEIRAMENTO**: Envolver payload no formato esperado pelo handler
+    task_body = {
+        "payload": payload,
+        "raw_body": raw_body.decode("utf-8", errors="replace") if raw_body else "",
+        "correlation_id": correlation_id,
+    }
+
     try:
-        task_id = await message_queue.enqueue(payload)
+        task_id = await message_queue.enqueue(task_body)
         logger.info(
             "webhook_enqueued",
             extra={
@@ -193,3 +244,135 @@ async def process_task(
     logger.info("task_processed", extra={"result": summary.model_dump()})
 
     return {"ok": True, "result": summary.model_dump()}
+
+
+# =============================================================================
+# ENDPOINTS INTERNOS (Cloud Tasks handlers)
+# =============================================================================
+
+
+def require_internal_token(request: Request, settings: Settings) -> None:
+    """Valida token interno obrigatório para endpoints internos."""
+    token = request.headers.get(settings.internal_token_header)
+    if not settings.internal_task_token:
+        logger.warning("internal_token_not_configured")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="internal_token_not_configured",
+        )
+    if token != settings.internal_task_token:
+        logger.warning("invalid_internal_token")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="invalid_internal_token",
+        )
+
+
+@router.post("/internal/process_inbound")
+async def process_inbound(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    tasks_dispatcher=Depends(get_tasks_dispatcher),
+    orchestrator=Depends(get_orchestrator),
+) -> dict[str, Any]:
+    """Processa task inbound (chamado por Cloud Tasks).
+
+    Este endpoint recebe o payload da mensagem, processa com o pipeline
+    e enfileira a resposta outbound.
+    """
+    require_internal_token(request, settings)
+
+    try:
+        task_body = await request.json()
+    except Exception as exc:
+        logger.error("failed_to_parse_task_payload", extra={"error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_json",
+        ) from exc
+
+    if not isinstance(task_body, dict) or "payload" not in task_body:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_task_payload",
+        )
+
+    payload = task_body.get("payload", {})
+    raw_body = task_body.get("raw_body", b"") or b""
+    if isinstance(raw_body, str):
+        raw_body = raw_body.encode("utf-8")
+    inbound_event_id = task_body.get("inbound_event_id") or compute_inbound_event_id(
+        payload, raw_body
+    )
+    correlation_id = task_body.get("correlation_id")
+    task_name = request.headers.get("X-CloudTasks-TaskName")
+
+    logger.info(
+        "processing_inbound_task",
+        extra={
+            "correlation_id": correlation_id,
+            "task_name": task_name,
+        },
+    )
+
+    result = await handle_inbound_task(
+        payload=payload,
+        inbound_event_id=inbound_event_id,
+        correlation_id=correlation_id,
+        tasks_dispatcher=tasks_dispatcher,
+        orchestrator=orchestrator,
+    )
+    logger.info(
+        "inbound_task_processed",
+        extra={
+            "correlation_id": correlation_id,
+            "processed": result.get("processed", 0),
+            "skipped": result.get("skipped", 0),
+        },
+    )
+
+    return {"ok": True, "result": result}
+
+
+@router.post("/internal/process_outbound")
+async def process_outbound(
+    request: Request,
+    settings: Settings = Depends(get_settings),
+    outbound_store=Depends(get_outbound_dedupe_store),
+) -> dict[str, Any]:
+    """Processa task outbound (chamado por Cloud Tasks).
+
+    Este endpoint recebe a mensagem a ser enviada e faz a chamada
+    para a API do WhatsApp.
+    """
+    require_internal_token(request, settings)
+
+    try:
+        task_body = await request.json()
+    except Exception as exc:
+        logger.error("failed_to_parse_outbound_payload", extra={"error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invalid_json",
+        ) from exc
+
+    correlation_id = task_body.get("correlation_id")
+    task_name = request.headers.get("X-CloudTasks-TaskName")
+
+    logger.info(
+        "processing_outbound_task",
+        extra={
+            "correlation_id": correlation_id,
+            "task_name": task_name,
+        },
+    )
+
+    result = await handle_outbound_task(task_body, settings, outbound_store)
+    logger.info(
+        "outbound_task_processed",
+        extra={
+            "correlation_id": correlation_id,
+            "status": result.get("status"),
+        },
+    )
+    return result

@@ -11,6 +11,7 @@ from fastapi import HTTPException, Request, status
 from pyloto_corp.adapters.whatsapp.models import OutboundMessageRequest
 from pyloto_corp.adapters.whatsapp.normalizer import extract_messages
 from pyloto_corp.adapters.whatsapp.outbound import WhatsAppOutboundClient
+from pyloto_corp.ai.orchestrator import AIOrchestrator
 from pyloto_corp.config.settings import Settings
 from pyloto_corp.domain.outbound_dedup import OutboundDedupeStore
 from pyloto_corp.observability.logging import get_logger
@@ -81,6 +82,7 @@ async def handle_inbound_task(
     inbound_event_id: str,
     correlation_id: str | None,
     tasks_dispatcher: Any,
+    orchestrator: AIOrchestrator,
 ) -> dict[str, int | str]:
     """Processa payload inbound e enfileira mensagens outbound via Cloud Tasks."""
     messages = extract_messages(payload)
@@ -90,18 +92,36 @@ async def handle_inbound_task(
     outbound_tasks: list[str] = []
 
     for msg in messages:
-        if not msg.from_number:
+        if not msg.from_number or not msg.text:
+            skipped += 1
+            continue
+
+        recipient = msg.from_number
+        if recipient and not recipient.startswith("+"):
+            recipient = f"+{recipient}"
+
+        response = orchestrator.process_message(message=msg)
+        if not response.reply_text:
             skipped += 1
             continue
 
         outbound_job = {
-            "to": msg.from_number,
+            "to": recipient,
             "message_type": "text",
-            "text": "Mensagem recebida",
+            "text": response.reply_text,
             "idempotency_key": msg.message_id,
             "correlation_id": correlation_id,
             "inbound_event_id": inbound_event_id,
         }
+
+        logger.info(
+            "outbound_job_prepared",
+            extra={
+                "recipient_has_plus": recipient.startswith("+") if recipient else False,
+                "recipient_len": len(recipient) if recipient else 0,
+                "idempotency_key_prefix": msg.message_id[:8],
+            },
+        )
         try:
             task_meta = await tasks_dispatcher.enqueue_outbound(outbound_job)
             outbound_tasks.append(task_meta.name)
@@ -192,6 +212,13 @@ async def handle_outbound_task(
         ) from exc
 
     if not response.success:
+        logger.error(
+            "whatsapp_send_failed",
+            extra={
+                "error_code": response.error_code,
+                "error_message": response.error_message,
+            },
+        )
         _safe_mark_failed(outbound_store, outbound_request.idempotency_key, response.error_message)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

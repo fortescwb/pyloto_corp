@@ -136,6 +136,11 @@ class CloudTasksDispatcher:
             schedule_time,
         )
 
+    async def enqueue(self, payload: Mapping[str, Any]) -> str:
+        """Compatibilidade com MessageQueue: enfileia inbound e retorna task_id."""
+        meta = await self.enqueue_inbound(payload)
+        return meta.name
+
     async def enqueue_outbound(
         self,
         payload: Mapping[str, Any],
