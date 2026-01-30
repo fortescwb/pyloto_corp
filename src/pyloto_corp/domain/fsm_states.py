@@ -20,28 +20,28 @@ class ConversationState(str, Enum):
 
     # Inicial
     INIT = "INIT"
-    
+
     # Fase de identificação
     IDENTIFYING = "IDENTIFYING"
-    
+
     # Fase de entendimento de intenção
     UNDERSTANDING_INTENT = "UNDERSTANDING_INTENT"
-    
+
     # Processando com LLM
     PROCESSING = "PROCESSING"
-    
+
     # Gerando resposta
     GENERATING_RESPONSE = "GENERATING_RESPONSE"
-    
+
     # Selecionando tipo de mensagem
     SELECTING_MESSAGE_TYPE = "SELECTING_MESSAGE_TYPE"
-    
+
     # Aguardando confirmação/resposta do usuário
     AWAITING_USER = "AWAITING_USER"
-    
+
     # Handoff para humano
     ESCALATING = "ESCALATING"
-    
+
     # Terminais
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
@@ -199,9 +199,7 @@ class FSMStateMachine:
             "transition_count": self.transition_count,
             "is_terminal": self.current_state in self.TERMINAL_STATES,
             "history_length": len(self.history),
-            "last_transition": (
-                self.history[-1] if self.history else None
-            ),
+            "last_transition": (self.history[-1] if self.history else None),
         }
 
     def reset(self) -> None:

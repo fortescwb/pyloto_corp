@@ -81,9 +81,7 @@ class FSMEngine:
                     "error": error,
                 },
             )
-            return FSMDispatchResult(
-                next_state=None, valid=False, error=error, actions=[]
-            )
+            return FSMDispatchResult(next_state=None, valid=False, error=error, actions=[])
 
         # Transição válida: determinar ações
         actions = self._determine_actions(current_state, event, next_state)

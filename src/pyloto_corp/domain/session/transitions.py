@@ -18,12 +18,10 @@ TRANSITIONS: dict[tuple[SessionState, SessionEvent], SessionState] = {
     (SessionState.INITIAL, SessionEvent.USER_SENT_MEDIA): SessionState.TRIAGE,
     (SessionState.INITIAL, SessionEvent.SESSION_TIMEOUT): SessionState.TIMEOUT,
     (SessionState.INITIAL, SessionEvent.INTERNAL_ERROR): SessionState.ERROR,
-
     # === TRIAGE → ... ===
     (SessionState.TRIAGE, SessionEvent.EVENT_DETECTED): SessionState.COLLECTING_INFO,
     (SessionState.TRIAGE, SessionEvent.INTERNAL_ERROR): SessionState.ERROR,
     (SessionState.TRIAGE, SessionEvent.SESSION_TIMEOUT): SessionState.TIMEOUT,
-
     # === COLLECTING_INFO → ... ===
     (
         SessionState.COLLECTING_INFO,
@@ -55,7 +53,6 @@ TRANSITIONS: dict[tuple[SessionState, SessionEvent], SessionState] = {
     ): SessionState.ROUTE_EXTERNAL,
     (SessionState.COLLECTING_INFO, SessionEvent.SESSION_TIMEOUT): SessionState.TIMEOUT,
     (SessionState.COLLECTING_INFO, SessionEvent.INTERNAL_ERROR): SessionState.ERROR,
-
     # === GENERATING_RESPONSE → ... ===
     (
         SessionState.GENERATING_RESPONSE,
@@ -71,7 +68,6 @@ TRANSITIONS: dict[tuple[SessionState, SessionEvent], SessionState] = {
     ): SessionState.ROUTE_EXTERNAL,
     (SessionState.GENERATING_RESPONSE, SessionEvent.SESSION_TIMEOUT): SessionState.TIMEOUT,
     (SessionState.GENERATING_RESPONSE, SessionEvent.INTERNAL_ERROR): SessionState.ERROR,
-
     # === Estados Terminais: SEM transições de saída ===
     # HANDOFF_HUMAN, SELF_SERVE_INFO, ROUTE_EXTERNAL, SCHEDULED_FOLLOWUP, TIMEOUT, ERROR
     # Nenhuma transição saindo desses estados (FSM finito)

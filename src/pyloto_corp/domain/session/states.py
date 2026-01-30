@@ -50,17 +50,17 @@ class SessionState(StrEnum):
 
 
 # Constantes auxiliares
-TERMINAL_STATES = frozenset({
-    SessionState.HANDOFF_HUMAN,
-    SessionState.SELF_SERVE_INFO,
-    SessionState.ROUTE_EXTERNAL,
-    SessionState.SCHEDULED_FOLLOWUP,
-    SessionState.TIMEOUT,
-    SessionState.ERROR,
-})
+TERMINAL_STATES = frozenset(
+    {
+        SessionState.HANDOFF_HUMAN,
+        SessionState.SELF_SERVE_INFO,
+        SessionState.ROUTE_EXTERNAL,
+        SessionState.SCHEDULED_FOLLOWUP,
+        SessionState.TIMEOUT,
+        SessionState.ERROR,
+    }
+)
 """Estados que encerram a sessão (sem transições posteriores)."""
 
-NON_TERMINAL_STATES = frozenset({
-    s for s in SessionState if s not in TERMINAL_STATES
-})
+NON_TERMINAL_STATES = frozenset({s for s in SessionState if s not in TERMINAL_STATES})
 """Estados que permitem transições posteriores."""

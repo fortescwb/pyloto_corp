@@ -127,16 +127,10 @@ class TestFSMStateMachine:
         # Flow: INIT -> IDENTIFYING -> UNDERSTANDING_INTENT -> PROCESSING
         # -> GENERATING_RESPONSE -> SELECTING_MESSAGE_TYPE -> COMPLETED
         assert fsm.transition(ConversationState.IDENTIFYING, trigger="start")
-        assert fsm.transition(
-            ConversationState.UNDERSTANDING_INTENT, trigger="intent_detected"
-        )
+        assert fsm.transition(ConversationState.UNDERSTANDING_INTENT, trigger="intent_detected")
         assert fsm.transition(ConversationState.PROCESSING, trigger="processing")
-        assert fsm.transition(
-            ConversationState.GENERATING_RESPONSE, trigger="generating"
-        )
-        assert fsm.transition(
-            ConversationState.SELECTING_MESSAGE_TYPE, trigger="selecting"
-        )
+        assert fsm.transition(ConversationState.GENERATING_RESPONSE, trigger="generating")
+        assert fsm.transition(ConversationState.SELECTING_MESSAGE_TYPE, trigger="selecting")
         assert fsm.transition(ConversationState.COMPLETED, trigger="completed")
 
         assert fsm.current_state == ConversationState.COMPLETED

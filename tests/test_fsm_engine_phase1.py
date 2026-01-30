@@ -42,9 +42,7 @@ class TestFSMEngineBasic:
         assert result.valid is True
         assert result.next_state == SessionState.COLLECTING_INFO
 
-    def test_collecting_to_generating_on_response_generated(
-        self, engine: FSMEngine
-    ) -> None:
+    def test_collecting_to_generating_on_response_generated(self, engine: FSMEngine) -> None:
         """COLLECTING_INFO + RESPONSE_GENERATED → GENERATING_RESPONSE."""
         result = engine.dispatch(
             current_state=SessionState.COLLECTING_INFO,
@@ -53,9 +51,7 @@ class TestFSMEngineBasic:
         assert result.valid is True
         assert result.next_state == SessionState.GENERATING_RESPONSE
 
-    def test_generating_to_handoff_on_message_type_selected(
-        self, engine: FSMEngine
-    ) -> None:
+    def test_generating_to_handoff_on_message_type_selected(self, engine: FSMEngine) -> None:
         """GENERATING_RESPONSE + MESSAGE_TYPE_SELECTED → HANDOFF_HUMAN (terminal)."""
         result = engine.dispatch(
             current_state=SessionState.GENERATING_RESPONSE,
@@ -94,9 +90,9 @@ class TestFSMEngineBasic:
             # Tentar qualquer evento
             for event in [SessionEvent.USER_SENT_TEXT, SessionEvent.INTERNAL_ERROR]:
                 is_valid, _, _ = validate_transition(terminal_state, event)
-                assert (
-                    is_valid is False
-                ), f"Terminal state {terminal_state} should not have transitions"
+                assert is_valid is False, (
+                    f"Terminal state {terminal_state} should not have transitions"
+                )
 
 
 class TestFSMEngineActions:
