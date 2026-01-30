@@ -46,7 +46,6 @@ from pyloto_corp.domain.abuse_detection import (
 )
 from pyloto_corp.domain.enums import Outcome
 from pyloto_corp.observability.logging import get_logger
-from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
     from pyloto_corp.domain.protocols import AsyncSessionStoreProtocol, DedupeProtocol
@@ -56,7 +55,21 @@ settings = get_settings()
 
 
 class PipelineAsyncV3:
-    """Pipeline assíncrono com paralelização de LLMs e persistência não-bloqueante."""
+    """Pipeline assíncrono com paralelização de LLMs e persistência não-bloqueante.
+
+    Compatibilidade: oferece `from_dependencies` que usa a factory para centralizar construção.
+    """
+
+    @classmethod
+    def from_dependencies(
+        cls,
+        dedupe_store: Any,
+        async_session_store: Any,
+        flood_detector: Any | None = None,
+    ) -> PipelineAsyncV3:
+        from pyloto_corp.application.factories.pipeline_factory import build_pipeline_async
+
+        return build_pipeline_async(dedupe_store, async_session_store, flood_detector)
 
     def __init__(
         self,
@@ -64,6 +77,7 @@ class PipelineAsyncV3:
         async_session_store: AsyncSessionStoreProtocol,
         flood_detector: FloodDetector | None = None,
         max_intent_limit: int = 3,
+        async_session_manager: Any | None = None,
     ) -> None:
         self._dedupe = dedupe_store
         self._async_sessions = async_session_store
@@ -71,9 +85,18 @@ class PipelineAsyncV3:
         self._max_intents = max_intent_limit
         self._spam = SpamDetector()
         self._abuse = AbuseChecker(max_intents_exceeded=max_intent_limit)
-        self._openai_client = (
-            get_openai_client() if settings.openai_enabled else None
-        )
+        self._openai_client = get_openai_client() if settings.openai_enabled else None
+
+        if async_session_manager is not None:
+            self._async_session_manager = async_session_manager
+        else:
+            from pyloto_corp.application.session_manager import AsyncSessionManager
+
+            self._async_session_manager = AsyncSessionManager(
+                async_session_store=self._async_sessions,
+                logger=get_logger(__name__),
+                settings=get_settings(),
+            )
 
     def _get_outbound_client(self):
         """Cria cliente WhatsApp outbound."""
@@ -85,9 +108,7 @@ class PipelineAsyncV3:
             phone_number_id=settings.whatsapp_phone_number_id or "",
         )
 
-    async def process_webhook(
-        self, payload: dict[str, Any]
-    ) -> WebhookProcessingSummary:
+    async def process_webhook(self, payload: dict[str, Any]) -> WebhookProcessingSummary:
         """Processa webhook: extrai mensagens e processa em paralelo."""
         messages = extract_messages(payload)
         total_received = len(messages)
@@ -103,9 +124,7 @@ class PipelineAsyncV3:
             tasks.append(self._process_message(msg))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        total_processed = sum(
-            1 for r in results if r is True and not isinstance(r, Exception)
-        )
+        total_processed = sum(1 for r in results if r is True and not isinstance(r, Exception))
 
         return WebhookProcessingSummary(
             total_received=total_received,
@@ -123,27 +142,21 @@ class PipelineAsyncV3:
     async def _process_message(self, msg: Any) -> bool:
         """Processa 1 mensagem de forma assíncrona."""
         try:
-            session = await self._get_or_create_session(msg)
+            session = await self._async_session_manager.get_or_create_session(msg)
 
             if self._is_abuse(msg, session):
                 session.outcome = Outcome.DUPLICATE_OR_SPAM
-                await self._async_sessions.save(session)
-                return False
-
+                await self._async_session_manager.persist(session)
             fsm_state, fsm_next_state = self._run_fsm(session)
 
             if not settings.openai_enabled:
                 logger.info("openai_disabled: using fallback")
                 return await self._process_with_fallback(msg, session)
 
-            return await self._process_with_llm(
-                msg, session, fsm_state, fsm_next_state
-            )
+            return await self._process_with_llm(msg, session, fsm_state, fsm_next_state)
 
         except (TimeoutError, ValueError, RuntimeError) as e:
-            logger.warning(
-                "llm_pipeline_error", extra={"error": type(e).__name__}
-            )
+            logger.warning("llm_pipeline_error", extra={"error": type(e).__name__})
             return False
         except Exception as e:
             logger.error("llm_pipeline_unexpected_error", extra={"error": str(e)})
@@ -158,9 +171,7 @@ class PipelineAsyncV3:
     ) -> bool:
         """Pipeline LLM com paralelização."""
         # **PARALELIZAÇÃO #1**: LLM#1 e LLM#2 em paralelo
-        llm1_task = asyncio.create_task(
-            self._run_llm1_event_detection(msg, session)
-        )
+        llm1_task = asyncio.create_task(self._run_llm1_event_detection(msg, session))
         llm1_result = await llm1_task
 
         logger.debug(
@@ -237,7 +248,7 @@ class PipelineAsyncV3:
                 extra={"error": send_result.error_message},
             )
             session.outcome = Outcome.FAILED_INTERNAL
-            await self._async_sessions.save(session)
+            await self._async_session_manager.persist(session)
             return False
 
         logger.info(
@@ -247,12 +258,10 @@ class PipelineAsyncV3:
 
         # **PERSISTÊNCIA ASSÍNCRONA**: Não bloqueia
         session.outcome = Outcome.AWAITING_USER
-        await self._async_sessions.save(session)
+        await self._async_session_manager.persist(session)
         return True
 
-    async def _run_llm1_event_detection(
-        self, msg: Any, session: SessionState
-    ) -> Any:
+    async def _run_llm1_event_detection(self, msg: Any, session: SessionState) -> Any:
         """LLM #1: Detect event (assíncrono nativo)."""
         user_input = msg.text or ""
         try:
@@ -286,14 +295,10 @@ class PipelineAsyncV3:
 
             return _fallback_response_generation()
 
-    async def _run_llm3_message_selection(
-        self, state: str, event: str, llm2_result: Any
-    ) -> Any:
+    async def _run_llm3_message_selection(self, state: str, event: str, llm2_result: Any) -> Any:
         """LLM #3: Select message type (assíncrono nativo)."""
         try:
-            msg_plan = await choose_message_plan(
-                self._openai_client, state, event, llm2_result
-            )
+            msg_plan = await choose_message_plan(self._openai_client, state, event, llm2_result)
             return msg_plan
         except Exception as e:
             logger.warning(
@@ -312,9 +317,7 @@ class PipelineAsyncV3:
         next_state = "GENERATING_RESPONSE"
         return current, next_state
 
-    def _build_whatsapp_payload(
-        self, msg: Any, msg_plan: Any
-    ) -> dict[str, Any] | None:
+    def _build_whatsapp_payload(self, msg: Any, msg_plan: Any) -> dict[str, Any] | None:
         """MessageBuilder (síncrono)."""
         try:
             from pyloto_corp.adapters.whatsapp.message_builder import (
@@ -322,10 +325,7 @@ class PipelineAsyncV3:
                 build_text_payload,
             )
 
-            to = (
-                getattr(msg, "from_number", None)
-                or getattr(msg, "sender_phone", None)
-            )
+            to = getattr(msg, "from_number", None) or getattr(msg, "sender_phone", None)
             if not to:
                 logger.error("missing_phone_for_payload")
                 return None
@@ -346,9 +346,7 @@ class PipelineAsyncV3:
             logger.error("payload_build_error", extra={"error": str(e)})
             return None
 
-    async def _process_with_fallback(
-        self, msg: Any, session: SessionState
-    ) -> bool:
+    async def _process_with_fallback(self, msg: Any, session: SessionState) -> bool:
         """Fallback quando OPENAI_ENABLED = False."""
         logger.info("using_fallback_response")
         session.outcome = Outcome.AWAITING_USER
@@ -374,15 +372,5 @@ class PipelineAsyncV3:
         return False
 
     async def _get_or_create_session(self, msg: Any) -> SessionState:
-        """Recuperar ou criar sessão (assíncrono)."""
-        chat_id = getattr(msg, "chat_id", None)
-
-        if chat_id:
-            session = await self._async_sessions.load(chat_id)
-            if session:
-                logger.debug("session_loaded", extra={"sid": chat_id[:8]})
-                return session
-
-        session = SessionState(session_id=new_session_id())
-        logger.info("session_created", extra={"sid": session.session_id[:8]})
-        return session
+        """Delegar para AsyncSessionManager."""
+        return await self._async_session_manager.get_or_create_session(msg)

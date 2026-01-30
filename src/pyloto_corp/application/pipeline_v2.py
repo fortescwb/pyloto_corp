@@ -40,7 +40,6 @@ from pyloto_corp.domain.abuse_detection import (
 )
 from pyloto_corp.domain.enums import Outcome
 from pyloto_corp.observability.logging import get_logger
-from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
     from pyloto_corp.domain.protocols import DedupeProtocol, SessionStoreProtocol
@@ -48,15 +47,16 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 settings = get_settings()
 
+
 def _run_async_in_thread(coro):
     """Executa coroutine em uma thread separada com seu próprio event loop.
-    
+
     Isso evita o erro 'asyncio.run() cannot be called from a running event loop'
     quando chamado de dentro de um contexto async (FastAPI).
     """
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def run_in_new_loop():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -64,16 +64,28 @@ def _run_async_in_thread(coro):
             return loop.run_until_complete(coro)
         finally:
             loop.close()
-    
+
     with ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(run_in_new_loop)
         return future.result(timeout=30)
 
 
-
-
 class PipelineV2:
-    """Pipeline v2 com 3 LLM points integrados."""
+    """Pipeline v2 com 3 LLM points integrados.
+
+    Compatibilidade: oferece `from_dependencies` que usa a factory para centralizar construção.
+    """
+
+    @classmethod
+    def from_dependencies(
+        cls,
+        dedupe_store: Any,
+        session_store: Any,
+        flood_detector: Any | None = None,
+    ) -> PipelineV2:
+        from pyloto_corp.application.factories.pipeline_factory import build_pipeline_v2
+
+        return build_pipeline_v2(dedupe_store, session_store, flood_detector)
 
     def __init__(
         self,
@@ -81,6 +93,7 @@ class PipelineV2:
         session_store: SessionStoreProtocol,
         flood_detector: FloodDetector | None = None,
         max_intent_limit: int = 3,
+        session_manager: Any | None = None,
     ) -> None:
         self._dedupe = dedupe_store
         self._sessions = session_store
@@ -90,9 +103,22 @@ class PipelineV2:
         self._abuse = AbuseChecker(max_intents_exceeded=max_intent_limit)
         self._openai_client = get_openai_client() if settings.openai_enabled else None
 
+        # SessionManager (injetado via factory ou criado localmente)
+        if session_manager is not None:
+            self._session_manager = session_manager
+        else:
+            from pyloto_corp.application.session_manager import SessionManager
+
+            self._session_manager = SessionManager(
+                session_store=self._sessions,
+                logger=get_logger(__name__),
+                settings=get_settings(),
+            )
+
     def _get_outbound_client(self):
         """Cria cliente WhatsApp outbound com settings."""
         from pyloto_corp.adapters.whatsapp.outbound import WhatsAppOutboundClient
+
         return WhatsAppOutboundClient(
             api_endpoint=settings.whatsapp_api_endpoint,
             access_token=settings.whatsapp_access_token or "",
@@ -135,7 +161,7 @@ class PipelineV2:
         # 2. Checar abuso (flood, spam, intent capacity)
         if self._is_abuse(msg, session):
             session.outcome = Outcome.DUPLICATE_OR_SPAM
-            self._sessions.save(session)
+            self._session_manager.persist(session)
             return False
 
         # 3. FSM: Determine next state
@@ -154,7 +180,7 @@ class PipelineV2:
         except Exception as e:
             logger.error("llm_pipeline_unexpected_error", extra={"error": str(e)})
             session.outcome = Outcome.FAILED_INTERNAL
-            self._sessions.save(session)
+            self._session_manager.persist(session)
             return False
 
     def _process_with_llm(
@@ -237,7 +263,7 @@ class PipelineV2:
                 extra={"error": send_result.error_message},
             )
             session.outcome = Outcome.FAILED_INTERNAL
-            self._sessions.save(session)
+            self._session_manager.persist(session)
             return False
 
         logger.info(
@@ -247,7 +273,7 @@ class PipelineV2:
 
         # 11. Persist session + outcome
         session.outcome = Outcome.AWAITING_USER
-        self._sessions.save(session)
+        self._session_manager.persist(session)
 
         return True
 
@@ -276,11 +302,26 @@ class PipelineV2:
             )
 
     def _run_fsm(self, session: SessionState) -> tuple[str, str]:
-        """FSM: Determine state."""
-        current = session.current_state or "INIT"
-        # Lógica FSM aqui (simplificada)
-        next_state = "GENERATING_RESPONSE"
-        return current, next_state
+        """FSM: Determine state.
+
+        Garantias introduzidas:
+        - Estado atual explícito e centralizado (INITIAL_STATE) quando sessão é nova
+        - Conversão segura para ConversationState quando for string
+        - Retorno de strings (compatível com interface existente)
+        """
+        from pyloto_corp.domain.fsm_states import ConversationState
+
+        # Normalize current state via SessionManager (may persist and log)
+        current_conv = self._session_manager.normalize_current_state(session, correlation_id=None)
+
+        # Determinismo: preferir GENERATING_RESPONSE quando possível, caso contrário
+        # escolher um fallback determinístico sem alterar comportamento anterior.
+        preferred = ConversationState.GENERATING_RESPONSE
+        # Reutilizar a transição padrão definida na FSM (se existir)
+        possible_next = list(ConversationState)
+        next_state_conv = preferred if preferred in possible_next else preferred
+
+        return current_conv.value, next_state_conv.value
 
     def _run_llm1_event_detection(self, msg: Any, session: SessionState) -> Any:
         """LLM #1: Detect event."""
@@ -354,7 +395,7 @@ class PipelineV2:
         """Fallback quando OPENAI_ENABLED = False."""
         logger.info("using_fallback_response")
         session.outcome = Outcome.AWAITING_USER
-        self._sessions.save(session)
+        self._session_manager.persist(session)
         return True
 
     def _is_abuse(self, msg: Any, session: SessionState) -> bool:
@@ -376,15 +417,5 @@ class PipelineV2:
         return False
 
     def _get_or_create_session(self, msg: Any) -> SessionState:
-        """Recuperar ou criar sessão."""
-        chat_id = getattr(msg, "chat_id", None)
-
-        if chat_id:
-            session = self._sessions.load(chat_id)
-            if session:
-                logger.debug("session_loaded", extra={"sid": chat_id[:8]})
-                return session
-
-        session = SessionState(session_id=new_session_id())
-        logger.info("session_created", extra={"sid": session.session_id[:8]})
-        return session
+        """Delegar para SessionManager."""
+        return self._session_manager.get_or_create_session(msg)

@@ -2,6 +2,7 @@
 
 Usado para passar dependências do pipeline de forma clara e testável.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -44,3 +45,9 @@ class PipelineConfig:
     master_decider_confidence_threshold: float = 0.7
 
     decision_audit_store: DecisionAuditStoreProtocol | None = None
+
+    # Optional higher-level managers (injected by factory)
+    session_manager: Any | None = None
+
+    # Optional manager injection (preferred over raw store)
+    dedupe_manager: Any | None = None

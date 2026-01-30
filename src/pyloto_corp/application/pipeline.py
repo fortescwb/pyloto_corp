@@ -23,24 +23,28 @@ from typing import TYPE_CHECKING, Any
 
 from pyloto_corp.adapters.whatsapp.models import WebhookProcessingSummary
 from pyloto_corp.adapters.whatsapp.normalizer import extract_messages
-from pyloto_corp.application.master_decider import decide_master
-from pyloto_corp.application.response_generator import generate_response_options
+from pyloto_corp.application.orchestration_decision import (
+    orchestrate_master_decision,
+)
+from pyloto_corp.application.orchestration_response import (
+    orchestrate_response_generation,
+)
+from pyloto_corp.application.orchestration_state import orchestrate_state_selection
+from pyloto_corp.application.pipeline_builder import ensure_pipeline_config
+from pyloto_corp.application.response_formatting import apply_otto_intro_if_first
 from pyloto_corp.application.session import SessionState
-from pyloto_corp.application.state_selector import select_next_state
+from pyloto_corp.application.session_validation import check_session_validation
 from pyloto_corp.domain.abuse_detection import AbuseChecker, FloodDetector, SpamDetector
 from pyloto_corp.domain.conversation_state import (
     ConversationState,
-    StateSelectorInput,
     StateSelectorOutput,
 )
 from pyloto_corp.domain.enums import MessageType, Outcome
 from pyloto_corp.domain.master_decision import MasterDecisionOutput
 from pyloto_corp.domain.response_generator import (
-    ResponseGeneratorInput,
     ResponseGeneratorOutput,
 )
 from pyloto_corp.observability.logging import get_logger
-from pyloto_corp.utils.ids import new_session_id
 
 if TYPE_CHECKING:
     from pyloto_corp.ai.orchestrator import AIOrchestrator
@@ -92,7 +96,7 @@ class WhatsAppInboundPipeline:
     - Persistência
     """
 
-    def __init__(self, config: "PipelineConfig" | None = None, **kwargs) -> None:
+    def __init__(self, config: PipelineConfig | None = None, **kwargs) -> None:
         """Construtor canônico: recebe um `PipelineConfig`.
 
         Compatibilidade: aceita também a assinatura antiga via keywords (por ex.:
@@ -100,36 +104,19 @@ class WhatsAppInboundPipeline:
         quando preferir clareza no código de chamada.
         """
         # Aceita assinatura compatível com a versão antiga (kwargs)
-        if config is None:
-            # Extrair campos relevantes dos kwargs e construir PipelineConfig
-            from pyloto_corp.application.pipeline_config import PipelineConfig
+        config = ensure_pipeline_config(config, **kwargs)
 
-            config = PipelineConfig(
-                dedupe_store=kwargs.get("dedupe_store"),
-                session_store=kwargs.get("session_store"),
-                orchestrator=kwargs.get("orchestrator"),
-                flood_detector=kwargs.get("flood_detector"),
-                max_intent_limit=kwargs.get("max_intent_limit", 3),
-                state_selector_client=kwargs.get("state_selector_client"),
-                state_selector_model=kwargs.get("state_selector_model"),
-                state_selector_threshold=kwargs.get("state_selector_threshold", 0.7),
-                state_selector_enabled=kwargs.get("state_selector_enabled", True),
-                response_generator_client=kwargs.get("response_generator_client"),
-                response_generator_model=kwargs.get("response_generator_model"),
-                response_generator_enabled=kwargs.get("response_generator_enabled", True),
-                response_generator_timeout=kwargs.get("response_generator_timeout"),
-                response_generator_min_responses=kwargs.get("response_generator_min_responses", 3),
-                master_decider_client=kwargs.get("master_decider_client"),
-                master_decider_model=kwargs.get("master_decider_model"),
-                master_decider_enabled=kwargs.get("master_decider_enabled", True),
-                master_decider_timeout=kwargs.get("master_decider_timeout"),
-                master_decider_confidence_threshold=kwargs.get(
-                    "master_decider_confidence_threshold", 0.7
-                ),
-                decision_audit_store=kwargs.get("decision_audit_store"),
-            )
+        # Dedupe manager (preferred) — created from store if necessary
+        from pyloto_corp.application.dedupe.manager import DedupeManager
+        from pyloto_corp.config.settings import get_settings
 
-        self._dedupe = config.dedupe_store
+        self._dedupe_store = config.dedupe_store
+        self._dedupe_manager = (
+            getattr(config, "dedupe_manager", None)
+            if getattr(config, "dedupe_manager", None) is not None
+            else DedupeManager(store=self._dedupe_store, settings=get_settings())
+        )
+
         self._sessions = config.session_store
         self._orchestrator = config.orchestrator
         self._flood = config.flood_detector
@@ -138,6 +125,19 @@ class WhatsAppInboundPipeline:
         self._abuse_checker = AbuseChecker(max_intents_exceeded=config.max_intent_limit)
         self._state_selector_client = config.state_selector_client
         self._state_selector_model = config.state_selector_model
+
+        # SessionManager (injetado ou criado pela fábrica)
+        if getattr(config, "session_manager", None) is not None:
+            self._session_manager = config.session_manager
+        else:
+            from pyloto_corp.application.session_manager import SessionManager
+            from pyloto_corp.config.settings import get_settings
+
+            self._session_manager = SessionManager(
+                session_store=self._sessions,
+                logger=get_logger(__name__),
+                settings=get_settings(),
+            )
         self._state_selector_threshold = config.state_selector_threshold
         self._state_selector_enabled = config.state_selector_enabled
         self._response_generator_client = config.response_generator_client
@@ -203,7 +203,6 @@ class WhatsAppInboundPipeline:
         )
         return cls(config)
 
-
     def process_webhook(
         self, payload: dict[str, Any], sender_phone: str | None = None
     ) -> PipelineResult:
@@ -224,256 +223,129 @@ class WhatsAppInboundPipeline:
         total_processed = total_received - total_deduped
         return self._build_result(total_received, total_deduped, total_processed, processed)
 
+    def _get_or_create_session(self, message: Any, sender_phone: str | None = None) -> SessionState:
+        """Compatibilidade com testes antigos que chamam _get_or_create_session.
+
+        Retorna apenas SessionState (não a tupla (session, is_first)).
+        Não adiciona ao histórico (preserva comportamento antigo).
+        """
+        # Usar get_or_create_session diretamente (sem append ao histórico)
+        return self._session_manager.get_or_create_session(message, sender_phone)
+
     def _process_single_message(
         self, message: Any, sender_phone: str | None
     ) -> tuple[ProcessedMessage | None, bool]:
         """Processa uma mensagem e indica se foi deduplicada."""
-        if not self._dedupe.mark_if_new(message.message_id):
+        if self._dedupe_manager.inbound(message.message_id):
             logger.debug(
                 "Message deduplicated",
                 extra={"message_id": message.message_id[:8]},
             )
             return None, True
 
-        session = self._get_or_create_session(message, sender_phone)
+        session, is_first = self._session_manager.prepare_for_processing(
+            message, sender_phone, correlation_id=getattr(message, "message_id", None)
+        )
 
-        abuse_result = self._check_abuse(message, session)
-        if abuse_result:
-            return abuse_result, False
+        # Validar sessão (flood, spam, abuso, intent capacity)
+        is_valid, rejection_outcome = check_session_validation(
+            message, session, self._flood, self._spam, self._abuse_checker
+        )
+        if not is_valid:
+            session.outcome = rejection_outcome
+            self._session_manager.persist(session)
+            return (
+                ProcessedMessage(
+                    message_id=message.message_id,
+                    is_duplicate=False,
+                    session_id=session.session_id,
+                    outcome=rejection_outcome,
+                ),
+                False,
+            )
 
-        capacity_result = self._check_intent_capacity(message, session)
-        if capacity_result:
-            return capacity_result, False
-
-        result = self._orchestrate_and_save(message, session)
+        result = self._orchestrate_and_save(message, session, is_first)
         return result, False
 
-    def _check_abuse(self, message: Any, session: SessionState) -> ProcessedMessage | None:
-        """Verifica flood, spam e padrões de abuso. Retorna ProcessedMessage se rejeitado."""
-        # Verificar flood
-        if self._flood:
-            flood_result = self._flood.check_and_record(session.session_id)
-            if flood_result.is_flooded:
-                logger.warning(
-                    "Message rejected: flood",
-                    extra={"session_id": session.session_id[:8]},
-                )
-                return self._reject_message(message, session, Outcome.DUPLICATE_OR_SPAM)
-
-        # Verificar spam
-        if self._spam.is_spam(message.text or ""):
-            logger.warning(
-                "Message rejected: spam",
-                extra={"session_id": session.session_id[:8]},
-            )
-            return self._reject_message(message, session, Outcome.DUPLICATE_OR_SPAM)
-
-        # Verificar abuso
-        if self._abuse_checker.is_abuse(session):
-            logger.warning(
-                "Message rejected: abuse",
-                extra={"session_id": session.session_id[:8]},
-            )
-            return self._reject_message(message, session, Outcome.DUPLICATE_OR_SPAM)
-
-        return None
-
-    def _check_intent_capacity(
-        self, message: Any, session: SessionState
-    ) -> ProcessedMessage | None:
-        """Verifica se sessão atingiu limite de intenções."""
-        if session.intent_queue.is_at_capacity():
-            logger.info(
-                "Session at max intents",
-                extra={"session_id": session.session_id[:8]},
-            )
-            return self._reject_message(message, session, Outcome.SCHEDULED_FOLLOWUP)
-        return None
-
-    def _reject_message(
-        self, message: Any, session: SessionState, outcome: Outcome
-    ) -> ProcessedMessage:
-        """Rejeita mensagem com outcome específico e persiste sessão."""
-        session.outcome = outcome
-        self._sessions.save(session)
-        return ProcessedMessage(
-            message_id=message.message_id, is_duplicate=False,
-            session_id=session.session_id, outcome=outcome,
-        )
-
     def _orchestrate_and_save(
-        self, message: Any, session: SessionState
+        self, message: Any, session: SessionState, is_first: bool = False
     ) -> ProcessedMessage:
         """Orquestra IA, atualiza e persiste sessão."""
+        from pyloto_corp.application.session_helpers import (
+            is_first_message_of_day,
+        )
+
+        # Verificar se é primeira mensagem do dia ANTES de adicionar ao histórico
+        msg_ts = getattr(message, "timestamp", None)
+        should_prefix = is_first_message_of_day(session, msg_ts)
+
+        # Registrar recebimento (idempotente por message_id) — centralizado no pipeline
+        try:
+            self._session_manager.append_user_message(
+                session, message, correlation_id=getattr(message, "message_id", None)
+            )
+        except Exception:
+            logger.exception("failed_to_append_received_event")
+
+        # Normalizar estado inválido (emite log se necessário)
+        self._session_manager.normalize_current_state(
+            session, correlation_id=getattr(message, "message_id", None)
+        )
+
         state_decision: StateSelectorOutput | None = None
         response_options: ResponseGeneratorOutput | None = None
+        master_decision: MasterDecisionOutput | None = None
 
         if self._state_selector_enabled:
-            selector_input = StateSelectorInput(
-                current_state=ConversationState(session.current_state),
-                possible_next_states=[
-                    ConversationState.AWAITING_USER,
-                    ConversationState.HANDOFF_HUMAN,
-                    ConversationState.SELF_SERVE_INFO,
-                    ConversationState.ROUTE_EXTERNAL,
-                    ConversationState.SCHEDULED_FOLLOWUP,
-                ],
-                message_text=message.text or "",
-                history_summary=[h.get("summary", "") for h in session.message_history],
-            )
-            state_decision = select_next_state(
-                selector_input,
+            state_decision = orchestrate_state_selection(
+                session,
+                message,
                 self._state_selector_client,
-                correlation_id=message.message_id,
-                model=self._state_selector_model,
-                confidence_threshold=self._state_selector_threshold,
+                self._state_selector_model,
+                self._state_selector_threshold,
             )
-            if state_decision.accepted:
-                session.current_state = state_decision.next_state.value
-            else:
-                session.message_history.append(
-                    {"summary": "state_hint", "hint": state_decision.response_hint}
-                )
 
         if self._response_generator_enabled and state_decision:
-            rg_input = ResponseGeneratorInput(
-                last_user_message=message.text or "",
-                day_history=session.message_history,
-                state_decision=state_decision,
-                current_state=ConversationState(session.current_state),
-                candidate_next_state=state_decision.selected_state,
-                confidence=state_decision.confidence,
-                response_hint=state_decision.response_hint,
-            )
-            response_options = generate_response_options(
-                rg_input,
+            response_options = orchestrate_response_generation(
+                session,
+                message,
+                state_decision,
                 self._response_generator_client,
-                correlation_id=message.message_id,
-                model=self._response_generator_model,
-                timeout_seconds=self._response_generator_timeout,
-                min_responses=self._response_generator_min_responses,
+                self._response_generator_model,
+                self._response_generator_timeout,
+                self._response_generator_min_responses,
             )
 
-        master_decision: MasterDecisionOutput | None = None
         if self._master_decider_enabled and state_decision and response_options:
-            from pyloto_corp.domain.master_decision import MasterDecisionInput
-
-            md_input = MasterDecisionInput(
-                last_user_message=message.text or "",
-                day_history=session.message_history,
-                state_decision=state_decision,
-                response_options=response_options,
-                current_state=ConversationState(session.current_state),
-                correlation_id=message.message_id,
-            )
-            master_decision = decide_master(
-                md_input,
+            master_decision = orchestrate_master_decision(
+                session,
+                message,
+                state_decision,
+                response_options,
                 self._master_decider_client,
-                correlation_id=message.message_id,
-                model=self._master_decider_model,
-                timeout_seconds=self._master_decider_timeout,
-                confidence_threshold=self._master_decider_confidence_threshold,
+                self._master_decider_model,
+                self._master_decider_timeout,
+                self._master_decider_confidence_threshold,
+                self._decision_audit_store,
             )
-            if master_decision.apply_state:
-                session.current_state = master_decision.final_state.value
-            if self._decision_audit_store:
-                try:
-                    self._decision_audit_store.append(
-                        {
-                            "timestamp": getattr(message, "timestamp", None),
-                            "correlation_id": message.message_id,
-                            "final_state": master_decision.final_state.value,
-                            "apply_state": master_decision.apply_state,
-                            "selected_response_index": master_decision.selected_response_index,
-                            "message_type": master_decision.message_type.value,
-                            "overall_confidence": master_decision.overall_confidence,
-                            "reason": master_decision.reason,
-                            "llm1": {
-                                "status": state_decision.status.value,
-                                "confidence": state_decision.confidence,
-                                "next_state": state_decision.next_state.value,
-                            },
-                            "responses_fingerprint": hash(tuple(response_options.responses)),
-                        }
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    logger.error(
-                        "decision_audit_append_failed",
-                        extra={"error": str(exc), "correlation_id": message.message_id},
-                    )
-
-        ai_response = self._orchestrator.process_message(
-            message, session=session, is_duplicate=False
-        )
-
-
-
-        if ai_response.intent:
-            session.intent_queue.add_intent(
-                ai_response.intent, confidence=ai_response.confidence
-            )
-
-        session.outcome = ai_response.outcome or Outcome.AWAITING_USER
 
         ai_response = self._orchestrator.process_message(
             message, session=session, is_duplicate=False
         )
 
         if ai_response.intent:
-            session.intent_queue.add_intent(
-                ai_response.intent, confidence=ai_response.confidence
-            )
+            session.intent_queue.add_intent(ai_response.intent, confidence=ai_response.confidence)
 
         session.outcome = ai_response.outcome or Outcome.AWAITING_USER
 
-        # Registrar recebimento e persistir sessão (append antes do save)
-        try:
-            from pyloto_corp.application.session_helpers import (
-                append_received_event,
-                is_first_message_of_day,
-            )
-            from pyloto_corp.domain.constants.otto import OTTO_INTRO_TEXT
+        # Persistir sessão
+        self._session_manager.finalize_after_orchestration(
+            session, session.outcome, correlation_id=getattr(message, "message_id", None)
+        )
 
-            had_any_received = any(rec.get("received_at") for rec in session.message_history)
-            is_first = (not had_any_received) or is_first_message_of_day(
-                session, getattr(message, "timestamp", None)
-            )
-
-            try:
-                append_received_event(session, getattr(message, "timestamp", None))
-            except Exception:
-                # Não falhar o fluxo por problema de append
-                logger.warning("failed_to_append_received_event")
-        except Exception:  # pragma: no cover - segurança
-            is_first = False
-            OTTO_INTRO_TEXT = None
-
-        try:
-            self._sessions.save(session)
-        except Exception as e:
-            logger.error(
-                "Failed to save session",
-                extra={"session_id": session.session_id[:8], "error": str(e)},
-            )
-
-        # Aplicar prefixo do Otto no texto final (após persistir sessão)
-        try:
-            if is_first and OTTO_INTRO_TEXT:
-                def _prefix(text: str | None) -> str | None:
-                    if not text:
-                        return None
-                    if text.strip().startswith(OTTO_INTRO_TEXT):
-                        return text
-                    return f"{OTTO_INTRO_TEXT}\n\n{text}"
-
-                new_reply = _prefix(ai_response.reply_text)
-
-                if new_reply is not None:
-                    ai_response.reply_text = new_reply
-                # Não prefixar `master_decision.selected_response_text` para preservar
-                # contratos de seleção (controle explícito pelo decider).
-        except Exception:  # pragma: no cover - segurança
-            logger.exception("otto_prefix_application_failed")
+        # Aplicar prefixo do Otto se for a primeira mensagem do dia
+        # (should_prefix foi calculado no início do método, antes de adicionar ao histórico)
+        ai_response.reply_text = apply_otto_intro_if_first(ai_response.reply_text, should_prefix)
 
         outcome = session.outcome
         logger.info(
@@ -523,40 +395,6 @@ class WhatsAppInboundPipeline:
             processed_messages=processed,
         )
 
-    def _get_or_create_session(
-        self, message: Any, sender_phone: str | None = None
-    ) -> SessionState:
-        """Recupera sessão existente ou cria nova.
-
-        Usa message.chat_id como chave se disponível.
-        """
-
-        # Tentar extrair chat_id da mensagem normalizada
-        chat_id = getattr(message, "chat_id", None)
-
-        if chat_id:
-            session = self._sessions.load(chat_id)
-            if session:
-                logger.debug(
-                    "Session loaded",
-                    extra={"session_id": chat_id[:8] + "..."},
-                )
-                return session
-
-        # Criar nova sessão
-        session_id = new_session_id()
-        session = SessionState(session_id=session_id)
-
-        logger.info(
-            "New session created",
-            extra={
-                "session_id": session_id[:8] + "...",
-                "chat_id": chat_id[:8] + "..." if chat_id else None,
-            },
-        )
-
-        return session
-
 
 def process_whatsapp_webhook(
     payload: dict[str, Any],
@@ -565,23 +403,13 @@ def process_whatsapp_webhook(
     orchestrator: AIOrchestrator,
     flood_detector: FloodDetector | None = None,
 ) -> PipelineResult:
-    """Função de conveniência para processamento de webhook.
+    """Função de conveniência para processamento de webhook."""
+    from pyloto_corp.application.factories.pipeline_factory import build_whatsapp_pipeline
 
-    Args:
-        payload: Payload bruto do webhook Meta
-        dedupe_store: Store de deduplicação
-        session_store: Store de persistência de sessão
-        orchestrator: Orquestrador de IA
-        flood_detector: Detector de flood (opcional)
-
-    Returns:
-        PipelineResult com resumo e detalhes
-    """
-    pipeline = WhatsAppInboundPipeline.from_dependencies(
+    pipeline = build_whatsapp_pipeline(
         dedupe_store=dedupe_store,
         session_store=session_store,
         orchestrator=orchestrator,
         flood_detector=flood_detector,
     )
-
     return pipeline.process_webhook(payload)
