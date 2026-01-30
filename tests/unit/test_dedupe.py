@@ -75,6 +75,17 @@ class TestInMemoryDedupeStore:
         assert store.mark_if_new("key2") is True
         assert store.mark_if_new("key1") is False
 
+    def test_seen_semantics_in_memory(self) -> None:
+        """`seen` deve ser atômico: retorna True se já visto, False se marcou agora."""
+        store = InMemoryDedupeStore(ttl_seconds=1)
+        assert store.seen("k1", ttl=1) is False
+        assert store.seen("k1", ttl=1) is True
+        # Após TTL expirar, visto volta a False
+        import time
+
+        time.sleep(1.1)
+        assert store.seen("k1", ttl=1) is False
+
 
 class TestRedisDedupeStore:
     """Testes para RedisDedupeStore com mocks."""

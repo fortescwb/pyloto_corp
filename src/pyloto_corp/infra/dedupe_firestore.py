@@ -62,9 +62,7 @@ class FirestoreDedupeStore(DedupeStore):
     def is_duplicate(self, key: str) -> bool:
         """Retorna True se documento existe e ainda não expirou."""
         try:
-            snapshot = (
-                self._client.collection(self._collection).document(key).get()
-            )
+            snapshot = self._client.collection(self._collection).document(key).get()
         except Exception as exc:  # noqa: BLE001
             logger.error(
                 "firestore_dedupe_error",

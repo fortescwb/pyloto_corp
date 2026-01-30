@@ -107,27 +107,38 @@ class InMemoryDedupeStore(DedupeStore):
     _seen: dict[str, float] = field(default_factory=dict)
     ttl_seconds: int = 604800  # 7 dias
 
-    def mark_if_new(self, key: str) -> bool:
-        """Marca chave se não existir; retorna True se evento é novo."""
-        self._cleanup_expired()
+    def seen(self, key: str, ttl: int) -> bool:
+        """Verifica + marca de forma atômica em memória.
+
+        Retorna True se já foi vista (duplicado). Se não, marca com timestamp e
+        retorna False. TTL é respeitado para limpeza simulada.
+        """
+        self._cleanup_expired(ttl)
 
         if key in self._seen:
             logger.debug(
                 "Dedupe hit (in-memory)",
                 extra={"key": key[:16] + "...", "is_duplicate": True},
             )
-            return False
+            return True
 
         self._seen[key] = time.time()
         logger.debug(
             "Dedupe miss (in-memory)",
             extra={"key": key[:16] + "...", "is_duplicate": False},
         )
-        return True
+        return False
+
+    # Compatibilidade: wrapper legado
+    def mark_if_new(self, key: str) -> bool:
+        """Compat wrapper: mantém semântica legada (True se novo, False se duplicado)."""
+        # marcar com TTL padrão da instância
+        new = not self.seen(key, self.ttl_seconds)
+        return new
 
     def is_duplicate(self, key: str) -> bool:
-        """Verifica sem marcar."""
-        self._cleanup_expired()
+        """Verifica sem marcar (compat compat)."""
+        self._cleanup_expired(self.ttl_seconds)
         return key in self._seen
 
     def clear(self, key: str) -> bool:
@@ -137,12 +148,15 @@ class InMemoryDedupeStore(DedupeStore):
             return True
         return False
 
-    def _cleanup_expired(self) -> None:
+    def _cleanup_expired(self, ttl: int | None = None) -> None:
         """Remove chaves expiradas (TTL simulado)."""
+        if ttl is None:
+            ttl = self.ttl_seconds
         now = time.time()
-        expired = [k for k, ts in self._seen.items() if now - ts > self.ttl_seconds]
+        expired = [k for k, ts in self._seen.items() if now - ts > ttl]
         for k in expired:
             del self._seen[k]
+
 
 
 class RedisDedupeStore(DedupeStore):
@@ -199,8 +213,7 @@ class RedisDedupeStore(DedupeStore):
             except ImportError as e:
                 logger.error("redis-py não instalado")
                 raise DedupeError(
-                    "Dependência redis não encontrada. "
-                    "Instale com: pip install redis"
+                    "Dependência redis não encontrada. Instale com: pip install redis"
                 ) from e
             except Exception as e:
                 logger.error(
@@ -217,14 +230,17 @@ class RedisDedupeStore(DedupeStore):
         """Adiciona prefixo à chave."""
         return f"{self._key_prefix}{key}"
 
-    def mark_if_new(self, key: str) -> bool:
-        """Usa SETNX com TTL para marcar evento novo."""
+    def seen(self, key: str, ttl: int) -> bool:
+        """Usa SETNX com TTL para marcar evento novo.
+
+        Retorna True se já foi vista (duplicado). Se não, marca e retorna False.
+        """
         client = self._get_client()
 
         if client is None:
             # Fallback silencioso (fail_closed=False)
             logger.warning("Redis indisponível, ignorando dedupe")
-            return True
+            return False  # conservador: não marca, assume novo
 
         redis_key = self._make_key(key)
 
@@ -233,30 +249,35 @@ class RedisDedupeStore(DedupeStore):
                 redis_key,
                 "1",
                 nx=True,
-                ex=self._ttl_seconds,
+                ex=ttl if ttl is not None else self._ttl_seconds,
             )
 
-            is_new = bool(was_set)
+            is_duplicate = not bool(was_set)
 
             logger.debug(
                 "Dedupe check (Redis)",
                 extra={
                     "key": key[:16] + "...",
-                    "is_duplicate": not is_new,
-                    "ttl": self._ttl_seconds,
+                    "is_duplicate": is_duplicate,
+                    "ttl": ttl or self._ttl_seconds,
                 },
             )
 
-            return is_new
+            return is_duplicate
 
         except Exception as e:
             logger.error(
                 "Erro em operação Redis",
-                extra={"operation": "mark_if_new", "error_type": type(e).__name__},
+                extra={"operation": "seen", "error_type": type(e).__name__},
             )
             if self._fail_closed:
                 raise DedupeError(f"Falha ao verificar dedupe: {e}") from e
-            return True
+            return False
+
+    # Compat wrapper
+    def mark_if_new(self, key: str) -> bool:
+        """Compat wrapper: True se novo, False se duplicado."""
+        return not self.seen(key, self._ttl_seconds)
 
     def is_duplicate(self, key: str) -> bool:
         """Verifica existência sem modificar."""
@@ -298,23 +319,10 @@ class RedisDedupeStore(DedupeStore):
             return False
 
 
-def create_dedupe_store(settings: Settings | None = None) -> DedupeStore:
+def create_dedupe_store(settings: Settings | None = None):
     """Factory para criar o store de dedupe apropriado.
 
-    Usa settings.dedupe_backend para determinar implementação:
-    - "memory": InMemoryDedupeStore (dev/testes)
-    - "redis": RedisDedupeStore (produção)
-    - "firestore": FirestoreDedupeStore (produção alternativa)
-
-    Args:
-        settings: Configurações da aplicação. Se None, usa get_settings()
-
-    Returns:
-        Instância do store configurado
-
-    Raises:
-        ValueError: Se backend não reconhecido
-        DedupeError: Se Redis não disponível em produção
+    Retorna uma implementação de `DedupeProtocol` com o método `seen(key, ttl)`.
     """
     if settings is None:
         from pyloto_corp.config.settings import get_settings

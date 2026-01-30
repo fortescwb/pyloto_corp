@@ -1,7 +1,12 @@
 """Protocolos de domínio para stores de dedupe.
 
 Interfaces leves (ABCs) dependidas por Application.
+
+Nota: PR-07 introduz o método `seen(key, ttl)` como API canônica, que é
+atômico (verifica+marca). Para manter compatibilidade com código legadoo,
+métodos auxiliares podem existir nas implementações.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -10,21 +15,20 @@ from abc import ABC, abstractmethod
 class DedupeProtocol(ABC):
     """Contrato mínimo para stores de deduplicação.
 
-    Métodos modelados a partir de `infra.dedupe.DedupeStore` para manter
-    compatibilidade com implementações existentes.
+    Método canônico:
+    - seen(key: str, ttl: int) -> bool
+      Retorna True se a chave já foi vista (duplicado). Se não vista, marca-a
+      com TTL e retorna False.
     """
 
     @abstractmethod
-    def mark_if_new(self, key: str) -> bool:
-        """Marca a chave se for nova (set-if-not-exists).
+    def seen(self, key: str, ttl: int) -> bool:
+        """Verifica e marca a chave de forma atômica.
 
-        Retorna True se chave foi marcada (evento novo), False se já existia.
+        Args:
+            key: Chave única (ex.: message_id ou hash)
+            ttl: TTL em segundos
+
+        Returns:
+            True se já foi vista (duplicado); False se foi marcada agora (novo).
         """
-
-    @abstractmethod
-    def is_duplicate(self, key: str) -> bool:
-        """Verifica existência sem marcar."""
-
-    @abstractmethod
-    def clear(self, key: str) -> bool:
-        """Remove uma chave do store (útil para testes/rollback)."""
