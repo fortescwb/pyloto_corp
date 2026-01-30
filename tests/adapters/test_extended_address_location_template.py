@@ -71,9 +71,7 @@ class TestAddressMessageValidation:
             to="+5511999999999",
             message_type="address",
         )
-        with pytest.raises(
-            ValidationError, match="At least one address field is required"
-        ):
+        with pytest.raises(ValidationError, match="At least one address field is required"):
             WhatsAppMessageValidator.validate_outbound_request(request)
 
 

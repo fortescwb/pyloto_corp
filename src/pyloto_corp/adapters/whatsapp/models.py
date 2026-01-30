@@ -17,7 +17,7 @@ class NormalizedWhatsAppMessage(BaseModel):
     """Mensagem normalizada para consumo do core.
 
     Campo message_type sempre reflete o tipo técnico do Meta:
-    text, image, video, audio, document, sticker, location, contacts, 
+    text, image, video, audio, document, sticker, location, contacts,
     address, reaction, interactive, template.
     """
 

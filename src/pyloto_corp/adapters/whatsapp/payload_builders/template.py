@@ -29,8 +29,7 @@ class TemplatePayloadBuilder:
                 {
                     "type": "body",
                     "parameters": [
-                        {"type": "text", "text": str(p)}
-                        for p in request.template_params.values()
+                        {"type": "text", "text": str(p)} for p in request.template_params.values()
                     ],
                 }
             ]

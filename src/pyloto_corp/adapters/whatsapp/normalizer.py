@@ -18,11 +18,26 @@ from pyloto_corp.observability.logging import get_logger
 logger = get_logger(__name__)
 
 # Tipos de mensagem suportados pela API Meta/WhatsApp
-_SUPPORTED_TYPES = frozenset({
-    "text", "image", "video", "audio", "document", "sticker",
-    "location", "address", "contacts", "interactive", "reaction",
-    "button", "order", "system", "request_welcome", "ephemeral",
-})
+_SUPPORTED_TYPES = frozenset(
+    {
+        "text",
+        "image",
+        "video",
+        "audio",
+        "document",
+        "sticker",
+        "location",
+        "address",
+        "contacts",
+        "interactive",
+        "reaction",
+        "button",
+        "order",
+        "system",
+        "request_welcome",
+        "ephemeral",
+    }
+)
 
 
 def _extract_text_message(
@@ -77,7 +92,7 @@ def _extract_address_message(
     msg: dict[str, Any],
 ) -> tuple[str | None, str | None, str | None, str | None, str | None]:
     """Extrai endereço de uma mensagem.
-    
+
     Retorna (street, city, state, zip_code, country_code).
     """
     address_block = msg.get("address") or {}
@@ -183,9 +198,7 @@ def _create_empty_fields() -> dict[str, Any]:
     }
 
 
-def _extract_fields_by_type(
-    msg: dict[str, Any], message_type: str, fields: dict[str, Any]
-) -> None:
+def _extract_fields_by_type(msg: dict[str, Any], message_type: str, fields: dict[str, Any]) -> None:
     """Popula campos específicos conforme tipo de mensagem.
 
     Modifica dicionário `fields` in-place com valores extraídos.

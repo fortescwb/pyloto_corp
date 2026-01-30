@@ -180,9 +180,7 @@ class WhatsAppHttpClient(HttpClient):
         response = await self._execute_send(url, payload, headers, endpoint)
         return self._process_whatsapp_response(response, endpoint)
 
-    def _build_request(
-        self, endpoint: str, access_token: str
-    ) -> tuple[str, dict[str, str]]:
+    def _build_request(self, endpoint: str, access_token: str) -> tuple[str, dict[str, str]]:
         """Monta URL e headers seguros para envio.
 
         Usa Authorization header conforme recomendação Meta:

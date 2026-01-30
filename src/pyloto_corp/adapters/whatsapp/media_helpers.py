@@ -24,10 +24,7 @@ from pyloto_corp.adapters.whatsapp.validators.limits import (
 
 # Todos os tipos MIME suportados
 ALL_SUPPORTED_MIME_TYPES = (
-    SUPPORTED_IMAGE_TYPES
-    | SUPPORTED_VIDEO_TYPES
-    | SUPPORTED_AUDIO_TYPES
-    | SUPPORTED_DOCUMENT_TYPES
+    SUPPORTED_IMAGE_TYPES | SUPPORTED_VIDEO_TYPES | SUPPORTED_AUDIO_TYPES | SUPPORTED_DOCUMENT_TYPES
 )
 
 
@@ -71,9 +68,7 @@ def validate_content(
         raise MediaValidationError("Conteúdo vazio não é permitido")
 
     if size_bytes > max_size_bytes:
-        raise MediaValidationError(
-            f"Arquivo excede limite de {max_size_mb}MB ({size_bytes} bytes)"
-        )
+        raise MediaValidationError(f"Arquivo excede limite de {max_size_mb}MB ({size_bytes} bytes)")
 
     if mime_type not in ALL_SUPPORTED_MIME_TYPES:
         raise MediaValidationError(f"Tipo MIME não suportado: {mime_type}")

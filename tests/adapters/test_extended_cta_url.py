@@ -46,9 +46,7 @@ class TestInteractiveCTAURLValidation:
             text="Clique para mais informações",
             cta_url="https://example.com/info",
         )
-        with pytest.raises(
-            ValidationError, match="cta_display_text is required"
-        ):
+        with pytest.raises(ValidationError, match="cta_display_text is required"):
             WhatsAppMessageValidator.validate_outbound_request(request)
 
     def test_cta_url_display_text_too_long(self):

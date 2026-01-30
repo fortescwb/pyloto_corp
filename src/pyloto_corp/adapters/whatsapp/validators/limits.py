@@ -15,19 +15,23 @@ SUPPORTED_IMAGE_TYPES = frozenset({"image/jpeg", "image/png"})
 
 SUPPORTED_VIDEO_TYPES = frozenset({"video/mp4", "video/3gpp"})
 
-SUPPORTED_AUDIO_TYPES = frozenset({
-    "audio/aac",
-    "audio/mp4",
-    "audio/amr",
-    "audio/ogg",
-})
+SUPPORTED_AUDIO_TYPES = frozenset(
+    {
+        "audio/aac",
+        "audio/mp4",
+        "audio/amr",
+        "audio/ogg",
+    }
+)
 
-SUPPORTED_DOCUMENT_TYPES = frozenset({
-    "application/pdf",
-    "application/msword",
-    "application/vnd.ms-excel",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-})
+SUPPORTED_DOCUMENT_TYPES = frozenset(
+    {
+        "application/pdf",
+        "application/msword",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    }
+)

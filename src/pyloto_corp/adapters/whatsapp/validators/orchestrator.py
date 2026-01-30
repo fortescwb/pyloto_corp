@@ -24,13 +24,15 @@ from pyloto_corp.adapters.whatsapp.validators.text import (
 from pyloto_corp.domain.enums import MessageCategory, MessageType
 
 # Tipos de mídia
-_MEDIA_TYPES = frozenset({
-    MessageType.IMAGE,
-    MessageType.VIDEO,
-    MessageType.AUDIO,
-    MessageType.DOCUMENT,
-    MessageType.STICKER,
-})
+_MEDIA_TYPES = frozenset(
+    {
+        MessageType.IMAGE,
+        MessageType.VIDEO,
+        MessageType.AUDIO,
+        MessageType.DOCUMENT,
+        MessageType.STICKER,
+    }
+)
 
 
 class WhatsAppMessageValidator:
@@ -62,14 +64,10 @@ class WhatsAppMessageValidator:
     def _validate_recipient(cls, request: OutboundMessageRequest) -> None:
         """Valida formato do destinatário."""
         if not request.to:
-            raise ValidationError(
-                "Recipient must be in E.164 format (e.g., +5511999999999)"
-            )
+            raise ValidationError("Recipient must be in E.164 format (e.g., +5511999999999)")
 
         if not request.to.startswith("+") or not request.to[1:].isdigit():
-            raise ValidationError(
-                "Recipient must be in E.164 format (e.g., +5511999999999)"
-            )
+            raise ValidationError("Recipient must be in E.164 format (e.g., +5511999999999)")
 
     @classmethod
     def _validate_message_type(
@@ -83,9 +81,7 @@ class WhatsAppMessageValidator:
         try:
             return MessageType(request.message_type)
         except ValueError:
-            raise ValidationError(
-                f"Invalid message_type: {request.message_type}"
-            ) from None
+            raise ValidationError(f"Invalid message_type: {request.message_type}") from None
 
     @classmethod
     def _dispatch_type_validation(
@@ -118,15 +114,11 @@ class WhatsAppMessageValidator:
             try:
                 MessageCategory(request.category)
             except ValueError:
-                raise ValidationError(
-                    f"Invalid category: {request.category}"
-                ) from None
+                raise ValidationError(f"Invalid category: {request.category}") from None
 
     @classmethod
     def _validate_idempotency(cls, request: OutboundMessageRequest) -> None:
         """Valida chave de idempotência."""
         key = request.idempotency_key
         if key and len(key) > MAX_IDEMPOTENCY_KEY_LENGTH:
-            raise ValidationError(
-                f"idempotency_key must not exceed {MAX_IDEMPOTENCY_KEY_LENGTH}"
-            )
+            raise ValidationError(f"idempotency_key must not exceed {MAX_IDEMPOTENCY_KEY_LENGTH}")

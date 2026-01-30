@@ -18,9 +18,7 @@ def validate_text_message(request: OutboundMessageRequest) -> None:
         raise ValidationError("text is required for TEXT message_type")
 
     if len(request.text) > MAX_TEXT_LENGTH:
-        raise ValidationError(
-            f"text exceeds maximum length of {MAX_TEXT_LENGTH} characters"
-        )
+        raise ValidationError(f"text exceeds maximum length of {MAX_TEXT_LENGTH} characters")
 
     if len(request.text.encode("utf-8")) > MAX_TEXT_LENGTH:
         raise ValidationError("text exceeds maximum UTF-8 byte length")

@@ -116,10 +116,7 @@ class TestFlowLocationRequestOutboundPayloads:
         assert interactive["type"] == "location_request_message"
         assert interactive["action"] == {"name": "send_location"}
         assert "buttons" not in interactive["action"]
-        assert (
-            interactive["body"]["text"]
-            == "Autorize o envio da sua localização"
-        )
+        assert interactive["body"]["text"] == "Autorize o envio da sua localização"
 
     def test_build_flow_payload(self):
         """Garante payload de flow com parâmetros obrigatórios."""
@@ -190,7 +187,4 @@ class TestInteractiveNormalization:
         assert len(messages) == 1
         assert messages[0].message_type == "interactive"
         assert messages[0].interactive_type == "cta_url"
-        assert (
-            messages[0].interactive_cta_url
-            == "https://example.com/callback"
-        )
+        assert messages[0].interactive_cta_url == "https://example.com/callback"

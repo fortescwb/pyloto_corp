@@ -199,8 +199,7 @@ class TemplateManager:
 
         # Verifica se precisa sincronizar
         needs_sync = force_sync or (
-            cached is not None
-            and _is_cache_expired(cached.last_synced_at, self._cache_ttl_hours)
+            cached is not None and _is_cache_expired(cached.last_synced_at, self._cache_ttl_hours)
         )
 
         if needs_sync and self._client:

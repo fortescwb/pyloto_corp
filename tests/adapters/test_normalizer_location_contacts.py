@@ -60,9 +60,7 @@ def test_extract_contacts_message():
                                                 "first_name": "João",
                                                 "last_name": "Silva",
                                             },
-                                            "phones": [
-                                                {"phone": "+5511988776655"}
-                                            ],
+                                            "phones": [{"phone": "+5511988776655"}],
                                         }
                                     ],
                                 }

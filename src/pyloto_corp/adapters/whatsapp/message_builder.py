@@ -78,13 +78,15 @@ def build_interactive_buttons_payload(
     for i, btn in enumerate(buttons[:3]):
         btn_id = btn.get("id", f"btn_{i}")
         btn_title = btn.get("title", "Opção")[:20]  # Máx 20 chars por botão
-        action_buttons.append({
-            "type": "reply",
-            "reply": {
-                "id": btn_id,
-                "title": btn_title,
+        action_buttons.append(
+            {
+                "type": "reply",
+                "reply": {
+                    "id": btn_id,
+                    "title": btn_title,
+                },
             }
-        })
+        )
 
     # Montar payload
     payload: dict[str, Any] = {
