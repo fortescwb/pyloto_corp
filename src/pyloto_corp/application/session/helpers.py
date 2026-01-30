@@ -2,6 +2,7 @@
 
 Funções testáveis relacionadas a histórico temporal de mensagens.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
