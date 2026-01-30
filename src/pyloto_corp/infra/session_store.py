@@ -35,9 +35,7 @@ def create_session_store(
 
     if backend_normalized == "firestore":
         if client is None:
-            raise SessionStoreError(
-                "Firestore client é obrigatório para backend firestore"
-            )
+            raise SessionStoreError("Firestore client é obrigatório para backend firestore")
         return FirestoreSessionStore(client, collection=collection)
 
     raise SessionStoreError(f"Backend de sessão não suportado: {backend}")

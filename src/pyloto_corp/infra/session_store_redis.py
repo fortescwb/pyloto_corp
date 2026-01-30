@@ -56,9 +56,7 @@ class RedisSessionStore(SessionStore):
             from pyloto_corp.application.session import SessionState
 
             session = SessionState.model_validate_json(payload)
-            logger.debug(
-                "Session loaded (Redis)", extra={"session_id": session_id[:8] + "..."}
-            )
+            logger.debug("Session loaded (Redis)", extra={"session_id": session_id[:8] + "..."})
             return session
         except Exception as e:  # pragma: no cover - log + wrap
             logger.error(
@@ -95,4 +93,3 @@ class RedisSessionStore(SessionStore):
                 extra={"session_id": session_id[:8] + "...", "error": str(e)},
             )
             return False
-

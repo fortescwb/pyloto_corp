@@ -1,13 +1,14 @@
 """Testes mínimos de compatibilidade entre infra e domain protocols."""
+
 from pyloto_corp.domain.protocols import (
+    DecisionAuditStoreProtocol,
     DedupeProtocol,
     SessionStoreProtocol,
-    DecisionAuditStoreProtocol,
 )
 from pyloto_corp.infra import (
+    DecisionAuditStore,
     DedupeStore,
     SessionStore,
-    DecisionAuditStore,
 )
 
 

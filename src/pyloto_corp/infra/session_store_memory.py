@@ -50,9 +50,7 @@ class InMemorySessionStore(SessionStore):
             )
             return None
 
-        logger.debug(
-            "Session loaded (in-memory)", extra={"session_id": session_id[:8] + "..."}
-        )
+        logger.debug("Session loaded (in-memory)", extra={"session_id": session_id[:8] + "..."})
         return session
 
     def delete(self, session_id: str) -> bool:
@@ -67,4 +65,3 @@ class InMemorySessionStore(SessionStore):
 
     def exists(self, session_id: str) -> bool:
         return self.load(session_id) is not None
-

@@ -38,9 +38,10 @@ class FirestoreDecisionAuditStore(DecisionAuditStore):
         self._collection = collection
 
     def append(self, record: dict[str, Any]) -> None:
-        doc_id = record.get("correlation_id") or hashlib.sha256(
-            json.dumps(record, sort_keys=True).encode("utf-8")
-        ).hexdigest()
+        doc_id = (
+            record.get("correlation_id")
+            or hashlib.sha256(json.dumps(record, sort_keys=True).encode("utf-8")).hexdigest()
+        )
         record = {**record, "created_at": datetime.now(tz=UTC)}
         self._client.collection(self._collection).document(doc_id).set(record)
 

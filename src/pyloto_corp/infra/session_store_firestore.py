@@ -84,9 +84,7 @@ class FirestoreSessionStore(SessionStore):
             from pyloto_corp.application.session import SessionState
 
             session = SessionState.model_validate(data)
-            logger.debug(
-                "Session loaded (Firestore)", extra={"session_id": session_id[:8] + "..."}
-            )
+            logger.debug("Session loaded (Firestore)", extra={"session_id": session_id[:8] + "..."})
             return session
         except Exception as e:  # pragma: no cover - log + wrap
             logger.error(
@@ -128,4 +126,3 @@ class FirestoreSessionStore(SessionStore):
                 extra={"session_id": session_id[:8] + "...", "error": str(e)},
             )
             return False
-

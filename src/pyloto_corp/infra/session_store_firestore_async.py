@@ -29,14 +29,10 @@ class AsyncFirestoreSessionStore(AsyncSessionStore):
         self._client = firestore_client
         self._collection = collection
 
-    async def save(
-        self, session: SessionState, ttl_seconds: int = 7200
-    ) -> None:
+    async def save(self, session: SessionState, ttl_seconds: int = 7200) -> None:
         """Persiste sessão em Firestore (assíncrono)."""
         ensure_terminal_outcome(session)
-        doc_ref = self._client.collection(self._collection).document(
-            session.session_id
-        )
+        doc_ref = self._client.collection(self._collection).document(session.session_id)
         expire_at = datetime.now(tz=UTC) + timedelta(seconds=ttl_seconds)
 
         try:
@@ -55,18 +51,12 @@ class AsyncFirestoreSessionStore(AsyncSessionStore):
                 "failed_save_firestore",
                 extra={"session_id": session.session_id[:8] + "...", "error": str(e)},
             )
-            raise AsyncSessionStoreError(
-                f"Failed to save session to Firestore: {e}"
-            ) from e
+            raise AsyncSessionStoreError(f"Failed to save session to Firestore: {e}") from e
 
     async def load(self, session_id: str) -> SessionState | None:
         """Carrega sessão de Firestore (assíncrono)."""
         try:
-            doc = (
-                self._client.collection(self._collection)
-                .document(session_id)
-                .get()
-            )
+            doc = self._client.collection(self._collection).document(session_id).get()
             if not doc.exists:
                 logger.debug("session_not_found_firestore", extra={"sid": session_id})
                 return None
@@ -74,14 +64,8 @@ class AsyncFirestoreSessionStore(AsyncSessionStore):
             data = doc.to_dict()
             expire_at = data.pop("_ttl_expire_at", None)
 
-            if (
-                expire_at
-                and isinstance(expire_at, datetime)
-                and datetime.now(tz=UTC) > expire_at
-            ):
-                logger.debug(
-                    "session_expired_firestore", extra={"sid": session_id}
-                )
+            if expire_at and isinstance(expire_at, datetime) and datetime.now(tz=UTC) > expire_at:
+                logger.debug("session_expired_firestore", extra={"sid": session_id})
                 await self.delete(session_id)
                 return None
 
@@ -96,9 +80,7 @@ class AsyncFirestoreSessionStore(AsyncSessionStore):
                 "failed_load_firestore",
                 extra={"session_id": session_id[:8] + "...", "error": str(e)},
             )
-            raise AsyncSessionStoreError(
-                f"Failed to load session from Firestore: {e}"
-            ) from e
+            raise AsyncSessionStoreError(f"Failed to load session from Firestore: {e}") from e
 
     async def delete(self, session_id: str) -> bool:
         """Remove sessão de Firestore."""
@@ -111,28 +93,18 @@ class AsyncFirestoreSessionStore(AsyncSessionStore):
                 "failed_delete_firestore",
                 extra={"session_id": session_id[:8] + "...", "error": str(e)},
             )
-            raise AsyncSessionStoreError(
-                f"Failed to delete session from Firestore: {e}"
-            ) from e
+            raise AsyncSessionStoreError(f"Failed to delete session from Firestore: {e}") from e
 
     async def exists(self, session_id: str) -> bool:
         """Verifica se sessão existe e não expirou."""
         try:
-            doc = (
-                self._client.collection(self._collection)
-                .document(session_id)
-                .get()
-            )
+            doc = self._client.collection(self._collection).document(session_id).get()
             if not doc.exists:
                 return False
 
             data = doc.to_dict()
             expire_at = data.get("_ttl_expire_at")
-            if (
-                expire_at
-                and isinstance(expire_at, datetime)
-                and datetime.now(tz=UTC) > expire_at
-            ):
+            if expire_at and isinstance(expire_at, datetime) and datetime.now(tz=UTC) > expire_at:
                 await self.delete(session_id)
                 return False
 

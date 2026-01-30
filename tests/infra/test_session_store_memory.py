@@ -78,7 +78,6 @@ class TestInMemorySessionStoreSave:
         saved_session, _ = store._sessions["same-id"]
         assert saved_session == session2
 
-
     def test_save_session_without_outcome_sets_failed_internal(self):
         """Sessões sem outcome devem ser normalizadas para FAILED_INTERNAL."""
         store = InMemorySessionStore()
