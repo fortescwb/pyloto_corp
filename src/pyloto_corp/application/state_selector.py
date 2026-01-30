@@ -116,9 +116,7 @@ def select_next_state(
     confidence_threshold: float = 0.7,
 ) -> StateSelectorOutput:
     """Executa seleção de estado com gate de confiança e fallback seguro."""
-    max_confidence, pre_hint, pre_status = _deterministic_precheck(
-        data, confidence_threshold
-    )
+    max_confidence, pre_hint, pre_status = _deterministic_precheck(data, confidence_threshold)
 
     try:
         prompt = _build_prompt(data)
@@ -161,9 +159,7 @@ def select_next_state(
         StateSelectorStatus.IN_PROGRESS.value,
         StateSelectorStatus.DONE.value,
     }
-    next_state = (
-        ConversationState(llm_selected) if accepted else data.current_state
-    )
+    next_state = ConversationState(llm_selected) if accepted else data.current_state
     if not accepted and not response_hint:
         response_hint = (
             "Preciso de confirmação antes de mudar de estado. "

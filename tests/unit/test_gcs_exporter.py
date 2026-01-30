@@ -351,10 +351,9 @@ class TestCleanupOldExports:
 
         # Simular documentos antigos no Firestore
         mock_doc = MagicMock()
-        (mock_firestore.collection.return_value.where.return_value
-         .limit.return_value.stream.return_value) = [
-            mock_doc
-        ]
+        (
+            mock_firestore.collection.return_value.where.return_value.limit.return_value.stream.return_value
+        ) = [mock_doc]
 
         exporter_with_firestore.cleanup_old_exports()
 
@@ -432,8 +431,8 @@ class TestGcsExporterEdgeCases:
         sample_content: bytes,
     ) -> None:
         """Erro de Firestore não deve falhar o save."""
-        mock_firestore.collection.return_value.document.return_value.set.side_effect = (
-            Exception("Firestore error")
+        mock_firestore.collection.return_value.document.return_value.set.side_effect = Exception(
+            "Firestore error"
         )
 
         # Não deve levantar exceção

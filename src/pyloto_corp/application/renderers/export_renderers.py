@@ -142,20 +142,19 @@ def build_header(
     """
     header_lines = [
         "HISTÓRICO DE CONVERSA — Pyloto",
-        (
-            f"Usuário: "
-            f"{profile.display_name if profile and profile.display_name else 'N/A'}"
-        ),
+        (f"Usuário: {profile.display_name if profile and profile.display_name else 'N/A'}"),
     ]
     if phone_to_render:
         header_lines.append(f"Telefone: {phone_to_render}")
 
     generated_ts = generated_at.astimezone(tz)
     generated_local = generated_ts.strftime("%Y-%m-%d %H:%M:%S %z")
-    header_lines.extend([
-        f"UserKey: {user_key}",
-        f"Gerado em: {generated_local} / {generated_at.isoformat()}",
-    ])
+    header_lines.extend(
+        [
+            f"UserKey: {user_key}",
+            f"Gerado em: {generated_local} / {generated_at.isoformat()}",
+        ]
+    )
     return header_lines
 
 

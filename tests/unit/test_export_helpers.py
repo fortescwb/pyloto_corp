@@ -38,9 +38,7 @@ class FakeConversationStore(ConversationStore):
     def append_message(self, message: ConversationMessage):
         raise NotImplementedError
 
-    def get_messages(
-        self, user_key: str, limit: int, cursor: str | None = None
-    ) -> Page:
+    def get_messages(self, user_key: str, limit: int, cursor: str | None = None) -> Page:
         filtered = [m for m in self._messages if m.user_key == user_key]
         return Page(items=filtered, next_cursor=None)
 
@@ -55,11 +53,7 @@ class FakeProfileStore(UserProfileStore):
         self.profile = profile
 
     def get_profile(self, user_key: str) -> UserProfile | None:
-        return (
-            self.profile
-            if self.profile and self.profile.user_key == user_key
-            else None
-        )
+        return self.profile if self.profile and self.profile.user_key == user_key else None
 
     def upsert_profile(self, profile: UserProfile) -> None:
         self.profile = profile
@@ -75,14 +69,10 @@ class FakeAuditStore(AuditLogStore):
         candidates = [e for e in self.events if e.user_key == user_key]
         return candidates[-1] if candidates else None
 
-    def list_events(
-        self, user_key: str, limit: int = 500
-    ) -> list[AuditEvent]:
+    def list_events(self, user_key: str, limit: int = 500) -> list[AuditEvent]:
         return [e for e in self.events if e.user_key == user_key][:limit]
 
-    def append_event(
-        self, event: AuditEvent, expected_prev_hash: str | None
-    ) -> bool:
+    def append_event(self, event: AuditEvent, expected_prev_hash: str | None) -> bool:
         latest = self.get_latest_event(event.user_key)
         latest_hash = latest.hash if latest else None
         if latest_hash != expected_prev_hash:

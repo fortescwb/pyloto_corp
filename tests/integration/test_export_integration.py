@@ -59,7 +59,7 @@ class TestExportIntegration:
         """Testa fluxo de export com múltiplas mensagens."""
         ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
         messages = []
-        
+
         # Adicionar 10 mensagens alternando direção
         for i in range(10):
             direction = "in" if i % 2 == 0 else "out"
@@ -92,7 +92,7 @@ class TestExportIntegration:
         # Validar que todas as mensagens aparecem no export
         for i in range(10):
             assert f"mensagem {i}" in result.export_text
-        
+
         # Validar contagem de mensagens nos metadados
         assert result.metadata["message_count"] == 10
 
@@ -100,7 +100,7 @@ class TestExportIntegration:
         """Testa que ordem de mensagens é preservada no export."""
         ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
         messages = []
-        
+
         for i in range(5):
             messages.append(
                 ConversationMessage(
@@ -128,15 +128,13 @@ class TestExportIntegration:
         )
 
         # Validar ordem
-        positions = [
-            result.export_text.index(f"msg_{i:02d}") for i in range(5)
-        ]
+        positions = [result.export_text.index(f"msg_{i:02d}") for i in range(5)]
         assert positions == sorted(positions)
 
     def test_export_with_tenant_isolation(self):
         """Testa que exports respeitam tenant_id."""
         ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
-        
+
         messages_tenant_a = [
             ConversationMessage(
                 provider="whatsapp",
@@ -153,7 +151,7 @@ class TestExportIntegration:
                 payload_ref=None,
             ),
         ]
-        
+
         messages_tenant_b = [
             ConversationMessage(
                 provider="whatsapp",
@@ -213,7 +211,7 @@ class TestExportIntegration:
         # Validar que evento de auditoria foi registrado
         assert "audit_tail_hash" in result.metadata
         assert result.metadata["audit_tail_hash"] is not None
-        
+
         # Validar que metadados contêm informações de auditoria
         assert "generated_at" in result.metadata
         assert "export_path" in result.metadata
@@ -221,7 +219,7 @@ class TestExportIntegration:
     def test_export_handles_pii_correctly_end_to_end(self):
         """Testa fluxo completo de PII masking."""
         ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
-        
+
         profile = UserProfile(
             user_key="uk",
             phone_e164="+5511999999999",
@@ -233,7 +231,7 @@ class TestExportIntegration:
             created_at=ts,
             updated_at=ts,
         )
-        
+
         messages = [
             ConversationMessage(
                 provider="whatsapp",
@@ -260,7 +258,7 @@ class TestExportIntegration:
             requester_actor="SYSTEM",
             reason="test",
         )
-        
+
         # Email e SSN não devem aparecer
         assert "joao@example.com" not in result_no_pii.export_text
         assert "123.456.789-00" not in result_no_pii.export_text
@@ -273,7 +271,7 @@ class TestExportIntegration:
             requester_actor="ADMIN",
             reason="test",
         )
-        
+
         # Email e telefone devem aparecer
         assert "joao@example.com" in result_with_pii.export_text
         assert "+5511999999999" in result_with_pii.export_text
@@ -316,13 +314,12 @@ class TestExportIntegration:
 
         # Conteúdo de export deve ser similar (timestamps podem variar)
         assert len(result1.export_text) == len(result2.export_text)
-        assert result1.metadata["message_count"] == \
-               result2.metadata["message_count"]
+        assert result1.metadata["message_count"] == result2.metadata["message_count"]
 
     def test_export_error_handling_with_missing_data(self):
         """Testa tratamento de erro quando dados estão ausentes."""
         use_case = create_export_use_case([], None)
-        
+
         # Export sem erros mesmo com dados vazios
         result = use_case.execute(
             user_key="uk",
@@ -371,7 +368,7 @@ class TestExportIntegration:
     def test_export_multiple_users_isolation(self):
         """Testa que exports de usuários diferentes são isolados."""
         ts = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
-        
+
         messages_uk1 = [
             ConversationMessage(
                 provider="whatsapp",
@@ -388,7 +385,7 @@ class TestExportIntegration:
                 payload_ref=None,
             ),
         ]
-        
+
         messages_uk2 = [
             ConversationMessage(
                 provider="whatsapp",
@@ -408,14 +405,14 @@ class TestExportIntegration:
 
         use_case1 = create_export_use_case(messages_uk1, None)
         use_case2 = create_export_use_case(messages_uk2, None)
-        
+
         result1 = use_case1.execute(
             user_key="uk1",
             include_pii=False,
             requester_actor="SYSTEM",
             reason="test",
         )
-        
+
         result2 = use_case2.execute(
             user_key="uk2",
             include_pii=False,

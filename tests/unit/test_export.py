@@ -109,13 +109,11 @@ def test_export_contains_timestamps_and_sha():
 
     # Validar que contém timestamp
     assert "2024-01-01" in result.export_text
-    
+
     # Validar que SHA256 está nos metadados
     assert "sha256_of_export" in result.metadata
     export_hash = result.metadata["sha256_of_export"]
-    expected_hash = hashlib.sha256(
-        result.export_text.encode("utf-8")
-    ).hexdigest()
+    expected_hash = hashlib.sha256(result.export_text.encode("utf-8")).hexdigest()
     assert export_hash == expected_hash
 
 
@@ -279,7 +277,7 @@ def test_export_multiple_messages_render_order():
     assert "primeira" in result.export_text
     assert "segunda" in result.export_text
     assert "terceira" in result.export_text
-    
+
     # Validar ordem: primeira deve vir antes de segunda
     idx_primeira = result.export_text.index("primeira")
     idx_segunda = result.export_text.index("segunda")
@@ -333,7 +331,7 @@ def test_export_user_key_derivation():
     )
 
     use_case = create_export_use_case(messages, profile)
-    
+
     # Invocar com phone_e164 em vez de user_key
     result = use_case.execute(
         phone_e164="+5511999999999",
@@ -350,7 +348,7 @@ def test_export_audit_event_recorded():
     """Testa que evento de export é registrado na auditoria."""
     datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
     messages = []
-    
+
     use_case = create_export_use_case(messages, None)
     result = use_case.execute(
         user_key="uk",
@@ -404,7 +402,7 @@ def test_export_result_structure():
 def test_export_requires_reason():
     """Testa que reason é obrigatório."""
     use_case = create_export_use_case([], None)
-    
+
     # Deve falhar sem reason
     with pytest.raises(TypeError):
         use_case.execute(user_key="uk")  # reason não fornecido
@@ -430,7 +428,6 @@ def test_export_includes_header_sections():
     assert "AUDITORIA" in result.export_text
 
     assert (
-        "2024-01-01 09:00:00" in result.export_text
-        or "2024-01-01 12:00:00" in result.export_text
+        "2024-01-01 09:00:00" in result.export_text or "2024-01-01 12:00:00" in result.export_text
     )
     assert result.metadata["sha256_of_export"]

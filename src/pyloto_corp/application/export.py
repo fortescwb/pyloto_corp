@@ -74,9 +74,7 @@ class ExportConversationUseCase:
         cursor = None
         all_messages: list[ConversationMessage] = []
         while True:
-            page = self.conversation_store.get_messages(
-                user_key=user_key, limit=200, cursor=cursor
-            )
+            page = self.conversation_store.get_messages(user_key=user_key, limit=200, cursor=cursor)
             all_messages.extend(page.items)
             if not page.next_cursor:
                 break
@@ -93,9 +91,8 @@ class ExportConversationUseCase:
     ) -> AuditEvent:
         """Registra evento de export na auditoria e retorna o evento."""
         from pyloto_corp.domain.audit import AuditActor
-        actor_normalized: AuditActor = (
-            "SYSTEM" if requester_actor.upper() == "SYSTEM" else "HUMAN"
-        )
+
+        actor_normalized: AuditActor = "SYSTEM" if requester_actor.upper() == "SYSTEM" else "HUMAN"
         export_event = self.audit_recorder.execute(
             user_key=user_key,
             action="EXPORT_GENERATED",
@@ -105,9 +102,7 @@ class ExportConversationUseCase:
         )
         return export_event
 
-    def _collect_data(
-        self, user_key: str, include_pii: bool
-    ) -> tuple[Any, str | None, list]:
+    def _collect_data(self, user_key: str, include_pii: bool) -> tuple[Any, str | None, list]:
         """Coleta profile e mensagens necessárias para o export."""
         profile = self.profile_store.get_profile(user_key)
         phone_render = profile.phone_e164 if (profile and include_pii) else None
@@ -128,9 +123,7 @@ class ExportConversationUseCase:
         msg_lines = render_messages(messages, tz, phone_render, include_pii)
         audit_lines = render_audit(audit_events, tz)
         profile_lines = render_profile(profile, include_pii)
-        header_lines = build_header(
-            user_key, profile, phone_render, datetime.now(tz=UTC), tz
-        )
+        header_lines = build_header(user_key, profile, phone_render, datetime.now(tz=UTC), tz)
         return format_export_text(header_lines, profile_lines, msg_lines, audit_lines)
 
     def _build_metadata(
@@ -177,9 +170,7 @@ class ExportConversationUseCase:
         user_key = self._resolve_user_key(phone_e164, user_key)
         tz = ZoneInfo(timezone or self.timezone)
 
-        export_event = self._record_export_event(
-            user_key, requester_actor, reason, tenant_id
-        )
+        export_event = self._record_export_event(user_key, requester_actor, reason, tenant_id)
         profile, phone_render, messages = self._collect_data(user_key, include_pii)
         audit_events = [export_event]
         export_text = self._render_export(
@@ -190,9 +181,7 @@ class ExportConversationUseCase:
             user_key, messages, export_event.hash, export_text, export_path
         )
         self._log_generated_export(user_key, messages, export_event.hash)
-        return ExportResult(
-            export_text=export_text, export_path=export_path, metadata=metadata
-        )
+        return ExportResult(export_text=export_text, export_path=export_path, metadata=metadata)
 
     def _resolve_include_pii(self, include_pii: bool | None) -> bool:
         """Resolve flag include_pii com default configurado."""
@@ -206,9 +195,7 @@ class ExportConversationUseCase:
             content_type="text/plain",
         )
 
-    def _log_generated_export(
-        self, user_key: str, messages: list, audit_hash: str
-    ) -> None:
+    def _log_generated_export(self, user_key: str, messages: list, audit_hash: str) -> None:
         """Log estruturado do resultado do export."""
         logger.info(
             "Conversation export generated",
