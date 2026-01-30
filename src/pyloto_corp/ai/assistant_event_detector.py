@@ -27,9 +27,7 @@ class EventDetector:
     def __init__(self) -> None:
         pass
 
-    async def detect(
-        self, request: EventDetectionRequest
-    ) -> EventDetectionResult:
+    async def detect(self, request: EventDetectionRequest) -> EventDetectionResult:
         """Detecta evento e intenção a partir do input do usuário.
 
         Args:
@@ -70,9 +68,7 @@ class EventDetector:
                 rationale="Fallback: erro na detecção",
             )
 
-    def _detect_deterministic(
-        self, request: EventDetectionRequest
-    ) -> EventDetectionResult:
+    def _detect_deterministic(self, request: EventDetectionRequest) -> EventDetectionResult:
         """Implementação determinística com fallback.
 
         Sem side effects; apenas lógica pura.
@@ -115,7 +111,5 @@ class EventDetector:
             detected_intent=detected_intent,
             confidence=confidence,
             requires_followup=(confidence < 0.7),
-            rationale=(
-                f"Detected intent: {detected_intent}, matches: {max_matches}"
-            ),
+            rationale=(f"Detected intent: {detected_intent}, matches: {max_matches}"),
         )

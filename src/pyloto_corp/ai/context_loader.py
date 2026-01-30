@@ -20,7 +20,7 @@ logger: logging.Logger = get_logger(__name__)
 
 class InstitucionalContextLoader:
     """Carregador de contexto institucional da Pyloto.
-    
+
     Responsabilidades:
     - Carregar documentos de contexto (vertentes, princípios, intents)
     - Formatar como system prompt para LLM
@@ -37,23 +37,23 @@ class InstitucionalContextLoader:
 
     def load_vertentes(self) -> str:
         """Carrega documento de vertentes (estrutura do ecossistema).
-        
+
         Returns:
             Conteúdo do arquivo vertentes.md como string.
-            
+
         Raises:
             FileNotFoundError: Se arquivo não existir.
         """
         cache_key = "vertentes"
         if cache_key in self._cached_context:
             return self._cached_context[cache_key]
-        
+
         vertentes_path = self._docs_dir / "vertentes.md"
         if not vertentes_path.exists():
             msg = f"Arquivo de vertentes não encontrado: {vertentes_path}"
             logger.error(msg)
             raise FileNotFoundError(msg)
-        
+
         try:
             content = vertentes_path.read_text(encoding="utf-8")
             self._cached_context[cache_key] = content
@@ -65,23 +65,23 @@ class InstitucionalContextLoader:
 
     def load_visao_principios(self) -> str:
         """Carrega documento de visão e princípios.
-        
+
         Returns:
             Conteúdo do arquivo visao_principios-e-posicionamento.md como string.
-            
+
         Raises:
             FileNotFoundError: Se arquivo não existir.
         """
         cache_key = "visao_principios"
         if cache_key in self._cached_context:
             return self._cached_context[cache_key]
-        
+
         visao_path = self._docs_dir / "visao_principios-e-posicionamento.md"
         if not visao_path.exists():
             msg = f"Arquivo de visão/princípios não encontrado: {visao_path}"
             logger.error(msg)
             raise FileNotFoundError(msg)
-        
+
         try:
             content = visao_path.read_text(encoding="utf-8")
             self._cached_context[cache_key] = content
@@ -93,23 +93,23 @@ class InstitucionalContextLoader:
 
     def load_contexto_llm(self) -> str:
         """Carrega documento de contexto LLM (taxonomy, intents, responses).
-        
+
         Returns:
             Conteúdo do arquivo contexto_llm/doc.md como string.
-            
+
         Raises:
             FileNotFoundError: Se arquivo não existir.
         """
         cache_key = "contexto_llm"
         if cache_key in self._cached_context:
             return self._cached_context[cache_key]
-        
+
         contexto_path = self._docs_dir / "contexto_llm" / "doc.md"
         if not contexto_path.exists():
             msg = f"Arquivo de contexto LLM não encontrado: {contexto_path}"
             logger.error(msg)
             raise FileNotFoundError(msg)
-        
+
         try:
             content = contexto_path.read_text(encoding="utf-8")
             self._cached_context[cache_key] = content
@@ -121,10 +121,10 @@ class InstitucionalContextLoader:
 
     def get_system_prompt_context(self) -> str:
         """Retorna contexto formatado para usar em system prompt.
-        
+
         Combina todos os documentos institucionais em um único texto
         pronto para ser incluído no system prompt da LLM.
-        
+
         Returns:
             String formatada com todo contexto institucional.
             Estrutura: vertentes + princípios + taxonomy/intents
@@ -156,7 +156,7 @@ class InstitucionalContextLoader:
                 self.load_contexto_llm(),
                 "",
             ]
-            
+
             context = "\n".join(parts)
             logger.debug(f"System prompt context gerado com sucesso ({len(context)} caracteres)")
             return context
@@ -166,13 +166,13 @@ class InstitucionalContextLoader:
 
     def get_resposta_canonica(self, intent_id: str) -> str | None:
         """Busca resposta canônica para um intent específico.
-        
+
         Extrai a resposta canônica documentada para um dado intent
         a partir do arquivo de contexto LLM.
-        
+
         Args:
             intent_id: Identificador do intent (ex: "O_QUE_E_PYLOTO")
-            
+
         Returns:
             Resposta canônica como string, ou None se intent não encontrado.
             Nota: Esta é uma busca simples baseada em padrão de texto.
@@ -180,7 +180,7 @@ class InstitucionalContextLoader:
         try:
             contexto = self.load_contexto_llm()
             # Busca padrão: "### INTENT: `{intent_id}`"
-            pattern = f'### INTENT: `{intent_id}`'
+            pattern = f"### INTENT: `{intent_id}`"
             if pattern in contexto:
                 # Extrai bloco de resposta canônica após o padrão
                 start_idx = contexto.find(pattern)
@@ -193,15 +193,15 @@ class InstitucionalContextLoader:
                     next_section = contexto.find("\n###", content_start)
                     if next_section < 0:
                         next_section = len(contexto)
-                    
+
                     resposta = contexto[content_start:next_section].strip()
                     # Remove marcação de bloco quote se presente
                     if resposta.startswith("> "):
                         resposta = resposta[2:].strip()
-                    
+
                     logger.debug(f"Resposta canônica encontrada para intent: {intent_id}")
                     return resposta
-            
+
             logger.debug(f"Resposta canônica não encontrada para intent: {intent_id}")
             return None
         except Exception as e:
@@ -215,7 +215,7 @@ _loader_instance: InstitucionalContextLoader | None = None
 
 def get_context_loader() -> InstitucionalContextLoader:
     """Retorna instância global do loader de contexto.
-    
+
     Implementa padrão Singleton lazy para garantir que o loader
     é inicializado apenas uma vez e reutilizado.
     """
@@ -227,7 +227,7 @@ def get_context_loader() -> InstitucionalContextLoader:
 
 def get_system_prompt_context() -> str:
     """Função de conveniência para obter system prompt com contexto.
-    
+
     Returns:
         String formatada com contexto institucional pronto para usar em prompts.
     """

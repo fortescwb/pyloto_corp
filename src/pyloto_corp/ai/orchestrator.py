@@ -193,9 +193,7 @@ class AIOrchestrator:
             intent, confidence = self._classifier.classify(text_input)
 
             # Decidir outcome
-            outcome = self._decider.decide(
-                intent, session=session, is_duplicate=is_duplicate
-            )
+            outcome = self._decider.decide(intent, session=session, is_duplicate=is_duplicate)
 
             # Gerar resposta apropriada
             reply = self._generate_reply(intent, outcome)
@@ -243,10 +241,7 @@ class AIOrchestrator:
             )
 
         if outcome == Outcome.HANDOFF_HUMAN:
-            return (
-                "Perfeito! Vou conectá-lo com nosso time especializado. "
-                "Um momento, por favor..."
-            )
+            return "Perfeito! Vou conectá-lo com nosso time especializado. Um momento, por favor..."
 
         if outcome == Outcome.ROUTE_EXTERNAL:
             return (
@@ -255,16 +250,9 @@ class AIOrchestrator:
             )
 
         if outcome == Outcome.SELF_SERVE_INFO:
-            return (
-                "Claro! Para mais informações, visite nosso site ou "
-                "me faça mais perguntas."
-            )
+            return "Claro! Para mais informações, visite nosso site ou me faça mais perguntas."
 
         if outcome == Outcome.UNSUPPORTED:
-            return (
-                "Desculpe, não consigo ajudar com isso no momento. "
-                "Você tem outra dúvida?"
-            )
+            return "Desculpe, não consigo ajudar com isso no momento. Você tem outra dúvida?"
 
         return None
-

@@ -15,6 +15,7 @@ from typing import Any
 from pyloto_corp.ai.contracts.event_detection import EventDetectionResult
 from pyloto_corp.ai.contracts.message_type_selection import MessageTypeSelectionResult
 from pyloto_corp.ai.contracts.response_generation import ResponseGenerationResult
+from pyloto_corp.domain.enums import MessageType
 from pyloto_corp.domain.session.events import SessionEvent
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ def parse_message_type_response(raw_response: str) -> MessageTypeSelectionResult
     try:
         data = _extract_json_from_response(raw_response)
 
-        message_type = data.get("message_type", "TEXT").upper()
+        message_type = str(data.get("message_type", "text")).lower()
         parameters = data.get("parameters", {})
 
         return MessageTypeSelectionResult(
@@ -147,7 +148,7 @@ def _fallback_response_generation() -> ResponseGenerationResult:
 def _fallback_message_type_selection() -> MessageTypeSelectionResult:
     """Fallback determinístico para message type selection."""
     return MessageTypeSelectionResult(
-        message_type="TEXT",
+        message_type=MessageType.TEXT,
         parameters={},
         confidence=0.1,
         rationale="Fallback: LLM message type selection falhou",

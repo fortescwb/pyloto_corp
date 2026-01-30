@@ -23,9 +23,7 @@ def _state_decision(accepted: bool, confidence: float, hint: str | None = None):
         next_state=ConversationState.AWAITING_USER,
         response_hint=hint,
         status=(
-            StateSelectorStatus.NEEDS_CLARIFICATION
-            if not accepted
-            else StateSelectorStatus.DONE
+            StateSelectorStatus.NEEDS_CLARIFICATION if not accepted else StateSelectorStatus.DONE
         ),
     )
 

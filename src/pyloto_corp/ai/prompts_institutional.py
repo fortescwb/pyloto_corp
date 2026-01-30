@@ -107,7 +107,7 @@ def build_response_generation_prompt(
 - Vertente de Negócio: {vertente}
 - Mensagem do Usuário: "{user_message}"
 
-{f'- Contexto Anterior: {previous_context}' if previous_context else ''}
+{f"- Contexto Anterior: {previous_context}" if previous_context else ""}
 
 ## Diretrizes de Resposta
 1. Seja claro, conciso e empático
