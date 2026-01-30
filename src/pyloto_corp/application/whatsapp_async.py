@@ -85,14 +85,48 @@ async def handle_inbound_task(
     orchestrator: AIOrchestrator,
 ) -> dict[str, int | str]:
     """Processa payload inbound e enfileira mensagens outbound via Cloud Tasks."""
+    logger.info(
+        "handle_inbound_task_started",
+        extra={
+            "inbound_event_id": inbound_event_id,
+            "correlation_id": correlation_id,
+        },
+    )
+    
     messages = extract_messages(payload)
+    logger.info(
+        "messages_extracted",
+        extra={
+            "count": len(messages),
+            "inbound_event_id": inbound_event_id,
+        },
+    )
+    
     deduped = 0
     enqueued = 0
     skipped = 0
     outbound_tasks: list[str] = []
 
-    for msg in messages:
+    for idx, msg in enumerate(messages):
+        logger.info(
+            "processing_message",
+            extra={
+                "index": idx,
+                "message_id_prefix": msg.message_id[:8] if msg.message_id else None,
+                "has_from": bool(msg.from_number),
+                "has_text": bool(msg.text),
+            },
+        )
+        
         if not msg.from_number or not msg.text:
+            logger.warning(
+                "message_skipped_missing_fields",
+                extra={
+                    "index": idx,
+                    "has_from": bool(msg.from_number),
+                    "has_text": bool(msg.text),
+                },
+            )
             skipped += 1
             continue
 
@@ -100,8 +134,36 @@ async def handle_inbound_task(
         if recipient and not recipient.startswith("+"):
             recipient = f"+{recipient}"
 
+        logger.info(
+            "calling_orchestrator",
+            extra={
+                "message_id_prefix": msg.message_id[:8],
+                "text_preview": msg.text[:30] if msg.text else None,
+            },
+        )
+        
         response = orchestrator.process_message(message=msg)
+        
+        logger.info(
+            "orchestrator_response",
+            extra={
+                "message_id_prefix": msg.message_id[:8],
+                "has_reply": bool(response.reply_text),
+                "intent": str(response.intent) if response.intent else None,
+                "outcome": str(response.outcome) if response.outcome else None,
+                "reply_preview": response.reply_text[:50] if response.reply_text else None,
+            },
+        )
+        
         if not response.reply_text:
+            logger.warning(
+                "message_skipped_no_reply",
+                extra={
+                    "message_id_prefix": msg.message_id[:8],
+                    "intent": str(response.intent) if response.intent else None,
+                    "outcome": str(response.outcome) if response.outcome else None,
+                },
+            )
             skipped += 1
             continue
 
@@ -120,19 +182,53 @@ async def handle_inbound_task(
                 "recipient_has_plus": recipient.startswith("+") if recipient else False,
                 "recipient_len": len(recipient) if recipient else 0,
                 "idempotency_key_prefix": msg.message_id[:8],
+                "text_len": len(response.reply_text) if response.reply_text else 0,
             },
         )
+        
         try:
+            logger.info(
+                "enqueuing_outbound",
+                extra={
+                    "idempotency_key_prefix": msg.message_id[:8],
+                },
+            )
             task_meta = await tasks_dispatcher.enqueue_outbound(outbound_job)
             outbound_tasks.append(task_meta.name)
             enqueued += 1
+            logger.info(
+                "outbound_enqueued",
+                extra={
+                    "task_name": task_meta.name,
+                    "idempotency_key_prefix": msg.message_id[:8],
+                },
+            )
         except Exception as exc:
+            logger.error(
+                "enqueue_outbound_failed",
+                extra={
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                    "idempotency_key_prefix": msg.message_id[:8],
+                },
+                exc_info=True,
+            )
             # Falha na enfileiração: tratamos como 503 (fail-closed)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="enqueue_outbound_failed",
             ) from exc
 
+    logger.info(
+        "handle_inbound_task_completed",
+        extra={
+            "inbound_event_id": inbound_event_id,
+            "processed": enqueued,
+            "skipped": skipped,
+            "deduped": deduped,
+        },
+    )
+    
     return {
         "inbound_event_id": inbound_event_id,
         "processed": enqueued,
