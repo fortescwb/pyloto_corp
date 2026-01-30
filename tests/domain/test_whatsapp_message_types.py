@@ -150,9 +150,7 @@ class TestDocumentMessage:
 
     def test_document_message_with_caption(self):
         """Deve criar DocumentMessage com caption."""
-        msg = DocumentMessage(
-            url="https://example.com/doc.pdf", caption="Documento importante"
-        )
+        msg = DocumentMessage(url="https://example.com/doc.pdf", caption="Documento importante")
         assert msg.caption == "Documento importante"
 
     def test_document_message_no_id_or_url_invalid(self):
@@ -191,9 +189,7 @@ class TestLocationMessage:
 
     def test_location_message_with_name(self):
         """Deve criar LocationMessage com nome."""
-        msg = LocationMessage(
-            latitude=-23.5505, longitude=-46.6333, name="São Paulo, SP"
-        )
+        msg = LocationMessage(latitude=-23.5505, longitude=-46.6333, name="São Paulo, SP")
         assert msg.name == "São Paulo, SP"
 
     def test_location_message_with_address(self):
@@ -222,9 +218,7 @@ class TestContactMessage:
 
     def test_contact_message_with_phones(self):
         """Deve criar ContactMessage com telefones."""
-        msg = ContactMessage(
-            name="João Silva", phones=["+5511987654321", "+5511912345678"]
-        )
+        msg = ContactMessage(name="João Silva", phones=["+5511987654321", "+5511912345678"])
         assert len(msg.phones) == 2
 
     def test_contact_message_with_emails(self):
@@ -302,9 +296,7 @@ class TestTemplateMessage:
 
     def test_template_message_with_category(self):
         """Deve criar TemplateMessage com categoria."""
-        msg = TemplateMessage(
-            namespace="hello", name="hello_world", category="MARKETING"
-        )
+        msg = TemplateMessage(namespace="hello", name="hello_world", category="MARKETING")
         assert msg.category == "MARKETING"
 
     def test_template_message_namespace_required(self):
@@ -467,9 +459,7 @@ class TestInteractiveLocationRequestMessage:
 
     def test_interactive_location_request_valid(self):
         """Deve criar InteractiveLocationRequestMessage válida."""
-        msg = InteractiveLocationRequestMessage(
-            body="Por favor, compartilhe sua localização"
-        )
+        msg = InteractiveLocationRequestMessage(body="Por favor, compartilhe sua localização")
         assert msg.body == "Por favor, compartilhe sua localização"
 
     def test_interactive_location_request_with_footer(self):

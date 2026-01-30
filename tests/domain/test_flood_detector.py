@@ -185,10 +185,13 @@ class TestRedisFloodDetector:
 class TestFloodDetectorParametrized:
     """Testes parametrizados para ambos detectores."""
 
-    @pytest.mark.parametrize("threshold,expected_flooded", [
-        (3, True),   # Threshold 3, enviar 3 deve gerar flood
-        (5, False),  # Threshold 5, enviar 3 não deve gerar flood
-    ])
+    @pytest.mark.parametrize(
+        "threshold,expected_flooded",
+        [
+            (3, True),  # Threshold 3, enviar 3 deve gerar flood
+            (5, False),  # Threshold 5, enviar 3 não deve gerar flood
+        ],
+    )
     def test_threshold_variations(
         self,
         in_memory_detector: InMemoryFloodDetector,

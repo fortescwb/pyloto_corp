@@ -38,9 +38,7 @@ class IntentQueue:
     queued: list[IntentItem] = field(default_factory=list)
     max_items: int = 3
 
-    def add_intent(
-        self, intent: Intent, confidence: float | None = None
-    ) -> bool:
+    def add_intent(self, intent: Intent, confidence: float | None = None) -> bool:
         """Adiciona intenção se houver capacidade.
 
         Retorna True se adicionada, False se exceder limite.

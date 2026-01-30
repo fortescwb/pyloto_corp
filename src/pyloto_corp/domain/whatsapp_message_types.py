@@ -38,9 +38,7 @@ class ImageMessage(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         """Valida que id ou url é fornecido."""
         if not self.id and not self.url:
-            raise ValueError(
-                "Image must have 'id' (inbound) or 'url' (outbound)"
-            )
+            raise ValueError("Image must have 'id' (inbound) or 'url' (outbound)")
 
 
 class VideoMessage(BaseModel):
@@ -53,9 +51,7 @@ class VideoMessage(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         """Valida que id ou url é fornecido."""
         if not self.id and not self.url:
-            raise ValueError(
-                "Video must have 'id' (inbound) or 'url' (outbound)"
-            )
+            raise ValueError("Video must have 'id' (inbound) or 'url' (outbound)")
 
 
 class AudioMessage(BaseModel):
@@ -67,9 +63,7 @@ class AudioMessage(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         """Valida que id ou url é fornecido."""
         if not self.id and not self.url:
-            raise ValueError(
-                "Audio must have 'id' (inbound) or 'url' (outbound)"
-            )
+            raise ValueError("Audio must have 'id' (inbound) or 'url' (outbound)")
 
 
 class DocumentMessage(BaseModel):
@@ -83,9 +77,7 @@ class DocumentMessage(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         """Valida que id ou url é fornecido."""
         if not self.id and not self.url:
-            raise ValueError(
-                "Document must have 'id' (inbound) or 'url' (outbound)"
-            )
+            raise ValueError("Document must have 'id' (inbound) or 'url' (outbound)")
 
 
 class StickerMessage(BaseModel):
@@ -97,9 +89,7 @@ class StickerMessage(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         """Valida que id ou url é fornecido."""
         if not self.id and not self.url:
-            raise ValueError(
-                "Sticker must have 'id' (inbound) or 'url' (outbound)"
-            )
+            raise ValueError("Sticker must have 'id' (inbound) or 'url' (outbound)")
 
 
 class LocationMessage(BaseModel):
@@ -135,12 +125,12 @@ class AddressMessage(BaseModel):
 
 class TemplateMessage(BaseModel):
     """Mensagem de template (modelo).
-    
+
     Templates são mensagens pré-aprovadas pela Meta para:
     - Marketing
     - Utility (notificações)
     - Authentication (OTP)
-    
+
     Não requerem janela de 24h aberta.
     """
 
@@ -199,7 +189,7 @@ class InteractiveFlowMessage(BaseModel):
 
 class InteractiveCTAURLMessage(BaseModel):
     """Mensagem interativa com botão de URL (CTA = Call To Action).
-    
+
     Associa uma URL a um botão, permitindo URLs longas sem obscurecer o corpo.
     """
 
@@ -211,7 +201,7 @@ class InteractiveCTAURLMessage(BaseModel):
 
 class InteractiveLocationRequestMessage(BaseModel):
     """Mensagem interativa com botão de envio de localização.
-    
+
     Exibe corpo de texto e botão para compartilhar localização.
     """
 

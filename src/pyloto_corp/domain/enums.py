@@ -33,7 +33,7 @@ class Intent(StrEnum):
 
 class MessageType(StrEnum):
     """Tipos de conteúdo suportados pela API Meta/WhatsApp.
-    
+
     Cobre todos os 16 tipos documentados pela Meta:
     - text, image, video, audio, document, sticker
     - location, contacts, address
@@ -58,7 +58,7 @@ class MessageType(StrEnum):
 
 class InteractiveType(StrEnum):
     """Tipos de mensagens interativas suportadas.
-    
+
     Conforme API Meta:
     - button: até 3 botões de resposta predefinida
     - list: lista de opções para escolha
