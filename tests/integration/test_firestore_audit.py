@@ -252,13 +252,16 @@ class TestFirestoreAuditLogStoreAppendEvent:
             """Simula o decorator @firestore.transactional."""
             return lambda tx: func(tx)
 
-        with patch.object(
-            store,
-            "_audit_collection",
-            return_value=mock_collection_ref,
-        ), patch(
-            "google.cloud.firestore.transactional",
-            side_effect=transactional_decorator,
+        with (
+            patch.object(
+                store,
+                "_audit_collection",
+                return_value=mock_collection_ref,
+            ),
+            patch(
+                "google.cloud.firestore.transactional",
+                side_effect=transactional_decorator,
+            ),
         ):
             # Transaction.set não lança erro
             transaction.set = MagicMock()
@@ -313,13 +316,16 @@ class TestFirestoreAuditLogStoreAppendEvent:
         def transactional_decorator(func):
             return lambda tx: func(tx)
 
-        with patch.object(
-            store,
-            "_audit_collection",
-            return_value=mock_collection_ref,
-        ), patch(
-            "google.cloud.firestore.transactional",
-            side_effect=transactional_decorator,
+        with (
+            patch.object(
+                store,
+                "_audit_collection",
+                return_value=mock_collection_ref,
+            ),
+            patch(
+                "google.cloud.firestore.transactional",
+                side_effect=transactional_decorator,
+            ),
         ):
             # Chamar append com prev_hash errado
             result = store.append_event(event, expected_prev_hash="hash1")

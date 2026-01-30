@@ -52,9 +52,7 @@ def sample_payload() -> bytes:
 class TestSignatureValidation:
     """Testes de validação de assinatura X-Hub-Signature-256."""
 
-    def test_valid_signature_accepted(
-        self, client_with_secret: TestClient, sample_payload: bytes
-    ):
+    def test_valid_signature_accepted(self, client_with_secret: TestClient, sample_payload: bytes):
         """Request com assinatura válida é aceito (200)."""
         signature = _compute_signature(sample_payload, WEBHOOK_SECRET)
 
@@ -125,9 +123,7 @@ class TestSignatureValidation:
         assert response.status_code == 401
         assert response.json()["detail"] == "invalid_signature"
 
-    def test_empty_signature_rejected(
-        self, client_with_secret: TestClient, sample_payload: bytes
-    ):
+    def test_empty_signature_rejected(self, client_with_secret: TestClient, sample_payload: bytes):
         """Request com assinatura vazia é rejeitado (401)."""
         response = client_with_secret.post(
             "/webhooks/whatsapp",
@@ -145,9 +141,7 @@ class TestSignatureValidation:
 class TestVerifyTokenValidation:
     """Testes de validação do verify token no endpoint GET."""
 
-    def test_valid_verify_token_returns_challenge(
-        self, client_with_secret: TestClient
-    ):
+    def test_valid_verify_token_returns_challenge(self, client_with_secret: TestClient):
         """Verify token correto retorna o challenge (200)."""
         response = client_with_secret.get(
             "/webhooks/whatsapp",
@@ -285,41 +279,41 @@ class TestEdgeCases:
             assert body["signature_validated"] is False
             assert body["signature_skipped"] is True
 
-    def test_very_large_payload_with_valid_signature(
-        self, client_with_secret: TestClient
-    ):
+    def test_very_large_payload_with_valid_signature(self, client_with_secret: TestClient):
         """Payload grande com assinatura válida é aceito."""
         # Criar payload grande mas válido
-        large_payload = json.dumps({
-            "object": "whatsapp_business_account",
-            "entry": [
-                {
-                    "id": "BIZ_ID",
-                    "changes": [
-                        {
-                            "value": {
-                                "messaging_product": "whatsapp",
-                                "metadata": {
-                                    "display_phone_number": "+55 11 99999-9999",
-                                    "phone_number_id": "PHONE_ID",
+        large_payload = json.dumps(
+            {
+                "object": "whatsapp_business_account",
+                "entry": [
+                    {
+                        "id": "BIZ_ID",
+                        "changes": [
+                            {
+                                "value": {
+                                    "messaging_product": "whatsapp",
+                                    "metadata": {
+                                        "display_phone_number": "+55 11 99999-9999",
+                                        "phone_number_id": "PHONE_ID",
+                                    },
+                                    "messages": [
+                                        {
+                                            "from": "5511888888888",
+                                            "id": f"wamid.MSG_{i:05d}",
+                                            "timestamp": "1700000000",
+                                            "text": {"body": f"Mensagem {i} " + "x" * 100},
+                                            "type": "text",
+                                        }
+                                        for i in range(10)  # 10 mensagens no batch
+                                    ],
                                 },
-                                "messages": [
-                                    {
-                                        "from": "5511888888888",
-                                        "id": f"wamid.MSG_{i:05d}",
-                                        "timestamp": "1700000000",
-                                        "text": {"body": f"Mensagem {i} " + "x" * 100},
-                                        "type": "text",
-                                    }
-                                    for i in range(10)  # 10 mensagens no batch
-                                ],
-                            },
-                            "field": "messages",
-                        }
-                    ],
-                }
-            ],
-        }).encode("utf-8")
+                                "field": "messages",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ).encode("utf-8")
 
         signature = _compute_signature(large_payload, WEBHOOK_SECRET)
 

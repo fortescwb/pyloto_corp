@@ -119,8 +119,9 @@ class TestGetProfile:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Perfil existente é retornado."""
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_profile("user_abc123")
@@ -135,8 +136,9 @@ class TestGetProfile:
         """Perfil inexistente retorna None."""
         snapshot = MagicMock()
         snapshot.exists = False
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_profile("nonexistent")
@@ -151,8 +153,9 @@ class TestGetProfile:
         snapshot = MagicMock()
         snapshot.exists = True
         snapshot.to_dict.return_value = {"invalid": "data"}  # Falta campos obrigatórios
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_profile("user_abc123")
@@ -174,10 +177,9 @@ class TestGetByPhone:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Telefone existente retorna perfil."""
-        (mock_firestore_client.collection.return_value.where.return_value
-         .limit.return_value.stream.return_value) = [
-            mock_doc_snapshot
-        ]
+        (
+            mock_firestore_client.collection.return_value.where.return_value.limit.return_value.stream.return_value
+        ) = [mock_doc_snapshot]
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_by_phone("+5511999999999")
@@ -189,8 +191,9 @@ class TestGetByPhone:
         mock_firestore_client: MagicMock,
     ) -> None:
         """Telefone inexistente retorna None."""
-        (mock_firestore_client.collection.return_value.where.return_value
-         .limit.return_value.stream.return_value) = []
+        (
+            mock_firestore_client.collection.return_value.where.return_value.limit.return_value.stream.return_value
+        ) = []
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_by_phone("+5511000000000")
@@ -208,10 +211,9 @@ class TestGetByPhone:
         mock_doc_snapshot2.to_dict.return_value = {"user_key": "second"}
 
         # Mesmo com múltiplos, deve usar o primeiro
-        (mock_firestore_client.collection.return_value.where.return_value
-         .limit.return_value.stream.return_value) = [
-            mock_doc_snapshot
-        ]
+        (
+            mock_firestore_client.collection.return_value.where.return_value.limit.return_value.stream.return_value
+        ) = [mock_doc_snapshot]
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_by_phone("+5511999999999")
@@ -249,8 +251,7 @@ class TestUpsertProfile:
         store.upsert_profile(sample_profile)
 
         call_args = (
-            mock_firestore_client.collection.return_value
-            .document.return_value.set.call_args
+            mock_firestore_client.collection.return_value.document.return_value.set.call_args
         )
         saved_data = call_args[0][0]
 
@@ -272,8 +273,9 @@ class TestUpdateField:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Atualização de campo existente funciona."""
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.update_field("user_abc123", "city", "Rio de Janeiro")
@@ -288,8 +290,9 @@ class TestUpdateField:
         """Atualização de perfil inexistente retorna False."""
         snapshot = MagicMock()
         snapshot.exists = False
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.update_field("nonexistent", "city", "SP")
@@ -302,17 +305,16 @@ class TestUpdateField:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Atualização registra histórico."""
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         store.update_field("user_abc123", "city", "Curitiba", actor="agent_1")
 
         # Deve ter chamado collection("history").document().set()
         history_calls = [
-            call
-            for call in mock_firestore_client.mock_calls
-            if "history" in str(call)
+            call for call in mock_firestore_client.mock_calls if "history" in str(call)
         ]
         assert len(history_calls) > 0
 
@@ -330,9 +332,9 @@ class TestGetUpdateHistory:
         mock_firestore_client: MagicMock,
     ) -> None:
         """Histórico vazio retorna lista vazia."""
-        (mock_firestore_client.collection.return_value.document.return_value
-         .collection.return_value.order_by.return_value
-         .limit.return_value.stream.return_value) = []
+        (
+            mock_firestore_client.collection.return_value.document.return_value.collection.return_value.order_by.return_value.limit.return_value.stream.return_value
+        ) = []
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.get_update_history("user_abc123")
@@ -349,7 +351,7 @@ class TestGetUpdateHistory:
         mock_collection = MagicMock()
         mock_query = MagicMock()
         mock_limited = MagicMock()
-        
+
         event_doc = MagicMock()
         event_doc.to_dict.return_value = {
             "timestamp": "2026-01-25T12:00:00+00:00",
@@ -399,10 +401,12 @@ class TestForget:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Forget de perfil existente retorna True."""
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
-        (mock_firestore_client.collection.return_value.document.return_value
-         .collection.return_value.stream.return_value) = []
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.collection.return_value.stream.return_value
+        ) = []
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.forget("user_abc123")
@@ -416,8 +420,9 @@ class TestForget:
         """Forget de perfil inexistente retorna False."""
         snapshot = MagicMock()
         snapshot.exists = False
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.forget("nonexistent")
@@ -433,12 +438,12 @@ class TestForget:
         history_doc = MagicMock()
         history_doc.reference = MagicMock()
 
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
-        (mock_firestore_client.collection.return_value.document.return_value
-         .collection.return_value.stream.return_value) = [
-            history_doc
-        ]
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.collection.return_value.stream.return_value
+        ) = [history_doc]
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         store.forget("user_abc123")
@@ -452,10 +457,12 @@ class TestForget:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Forget remove o perfil."""
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
-        (mock_firestore_client.collection.return_value.document.return_value
-         .collection.return_value.stream.return_value) = []
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.collection.return_value.stream.return_value
+        ) = []
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         store.forget("user_abc123")
@@ -493,8 +500,7 @@ class TestEdgeCases:
         store.upsert_profile(business_profile)
 
         call_args = (
-            mock_firestore_client.collection.return_value
-            .document.return_value.set.call_args
+            mock_firestore_client.collection.return_value.document.return_value.set.call_args
         )
         saved_data = call_args[0][0]
 
@@ -507,8 +513,9 @@ class TestEdgeCases:
         mock_doc_snapshot: MagicMock,
     ) -> None:
         """Atualização de lead_score funciona."""
-        (mock_firestore_client.collection.return_value
-         .document.return_value.get.return_value) = mock_doc_snapshot
+        (
+            mock_firestore_client.collection.return_value.document.return_value.get.return_value
+        ) = mock_doc_snapshot
 
         store = FirestoreUserProfileStore(mock_firestore_client)
         result = store.update_field("user_abc123", "lead_score", "100")
