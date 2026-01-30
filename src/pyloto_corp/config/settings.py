@@ -167,6 +167,9 @@ class Settings(BaseSettings):
     session_max_intents: int = 3  # Máximo de intenções por sessão
     session_awaiting_timeout_minutes: int = 10  # Timeout em AWAITING_USER
 
+    # Máximo de entradas armazenadas em `session.message_history` (poda segura)
+    SESSION_MESSAGE_HISTORY_MAX_ENTRIES: int = 200
+
     # Session store backend — conforme C2
     session_store_backend: str = "memory"  # memory | redis | firestore
 
@@ -331,8 +334,10 @@ class Settings(BaseSettings):
             errors.append("DECISION_AUDIT_BACKEND inválido: use memory|firestore")
         if (self.is_staging or self.is_production) and backend == "memory":
             errors.append("DECISION_AUDIT_BACKEND=memory proibido em staging/production")
-        if self.master_decider_enabled and backend == "firestore" and not (
-            self.firestore_project_id or self.gcp_project
+        if (
+            self.master_decider_enabled
+            and backend == "firestore"
+            and not (self.firestore_project_id or self.gcp_project)
         ):
             errors.append("Decision audit firestore requer FIRESTORE_PROJECT_ID ou GCP_PROJECT")
         return errors
@@ -435,9 +440,7 @@ class Settings(BaseSettings):
                     "SKIP_SECRET_MANAGER é proibido em staging/production",
                     extra={"environment": self.environment},
                 )
-                raise RuntimeError(
-                    "SKIP_SECRET_MANAGER não é permitido em staging/production"
-                )
+                raise RuntimeError("SKIP_SECRET_MANAGER não é permitido em staging/production")
 
             # Em testes unitários com environment=staging/prod, evitamos chamada real
             # ao Secret Manager para manter isolamento. PYTEST_CURRENT_TEST é setado pelo pytest.
@@ -459,14 +462,10 @@ class Settings(BaseSettings):
                     "GOOGLE_CLOUD_PROJECT não configurado para Secret Manager",
                     extra={"environment": self.environment},
                 )
-                raise RuntimeError(
-                    "GOOGLE_CLOUD_PROJECT obrigatório em staging/production"
-                )
+                raise RuntimeError("GOOGLE_CLOUD_PROJECT obrigatório em staging/production")
 
             try:
-                provider = create_secret_provider(
-                    backend="secret_manager", project_id=project_id
-                )
+                provider = create_secret_provider(backend="secret_manager", project_id=project_id)
             except Exception as e:
                 logger.error(
                     "Falha ao criar Secret Manager provider",

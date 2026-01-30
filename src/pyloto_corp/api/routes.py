@@ -79,16 +79,12 @@ async def whatsapp_webhook(
     )
 
     if not signature_result.valid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_signature"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_signature")
 
     try:
         payload = json.loads(raw_body or b"{}")
     except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_json"
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_json") from exc
 
     inbound_event_id = compute_inbound_event_id(payload, raw_body)
     correlation_id = get_correlation_id()

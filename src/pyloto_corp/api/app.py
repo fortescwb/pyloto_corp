@@ -26,6 +26,7 @@ def _create_redis_client(redis_url: str | None):
         return None
     try:
         import redis
+
         return redis.from_url(redis_url, decode_responses=True)
     except ImportError:
         logger.warning("redis package not installed, falling back to memory")
@@ -140,6 +141,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.session_store = create_session_store("redis", client=redis_client)
     elif backend == "firestore":
         from google.cloud import firestore
+
         firestore_client = firestore.Client()
         app.state.session_store = create_session_store("firestore", client=firestore_client)
     else:

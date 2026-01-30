@@ -72,17 +72,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if backend == "redis":
         redis_client = _create_redis_client(settings.redis_url)
         if redis_client is None:
-            raise ValueError(
-                "SESSION_STORE_BACKEND=redis mas REDIS_URL não configurado"
-            )
+            raise ValueError("SESSION_STORE_BACKEND=redis mas REDIS_URL não configurado")
         app.state.session_store = create_session_store("redis", client=redis_client)
     elif backend == "firestore":
         from google.cloud import firestore
 
         firestore_client = firestore.Client()
-        app.state.session_store = create_session_store(
-            "firestore", client=firestore_client
-        )
+        app.state.session_store = create_session_store("firestore", client=firestore_client)
     else:
         app.state.session_store = create_session_store("memory")
 
