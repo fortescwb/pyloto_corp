@@ -3,8 +3,8 @@ from __future__ import annotations
 import time
 
 from pyloto_corp.application.dedupe.manager import DedupeManager
-from pyloto_corp.infra.dedupe import InMemoryDedupeStore
 from pyloto_corp.config.settings import Settings
+from pyloto_corp.infra.dedupe import InMemoryDedupeStore
 
 
 class TestDedupeManager:
