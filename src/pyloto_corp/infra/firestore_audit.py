@@ -72,11 +72,7 @@ class FirestoreAuditLogStore(AuditLogStore):
         Returns:
             CollectionReference para /conversations/{user_key}/audit
         """
-        return (
-            self._client.collection(self._collection)
-            .document(user_key)
-            .collection("audit")
-        )
+        return self._client.collection(self._collection).document(user_key).collection("audit")
 
     def get_latest_event(self, user_key: str) -> AuditEvent | None:
         """Recupera último evento da auditoria.
@@ -201,4 +197,3 @@ class FirestoreAuditLogStore(AuditLogStore):
             return None
         doc_dict = docs[0].to_dict()
         return doc_dict.get("hash") if doc_dict else None
-

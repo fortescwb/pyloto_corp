@@ -219,9 +219,7 @@ class InstitutionalContextLoader:
                         canonical_response=current_intent_data.get("response", ""),
                         requires_escalation=current_intent_data.get("escalate", False),
                     )
-                    self.intents[
-                        f"{current_category}:{current_intent}".lower()
-                    ] = intent
+                    self.intents[f"{current_category}:{current_intent}".lower()] = intent
 
                 current_intent = line.replace("###", "").strip()
                 current_intent_data = {}

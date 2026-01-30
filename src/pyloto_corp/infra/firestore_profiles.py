@@ -86,9 +86,7 @@ class FirestoreUserProfileStore(UserProfileStore):
     def get_by_phone(self, phone_e164: str) -> UserProfile | None:
         """Busca perfil por telefone (dedup)."""
         query = (
-            self._client.collection(self._collection)
-            .where("phone_e164", "==", phone_e164)
-            .limit(1)
+            self._client.collection(self._collection).where("phone_e164", "==", phone_e164).limit(1)
         )
         docs = list(query.stream())
 
@@ -136,10 +134,12 @@ class FirestoreUserProfileStore(UserProfileStore):
         now = datetime.now(tz=UTC)
 
         # Atualiza campo
-        doc_ref.update({
-            field: value,
-            "updated_at": now.isoformat(),
-        })
+        doc_ref.update(
+            {
+                field: value,
+                "updated_at": now.isoformat(),
+            }
+        )
 
         # Registra histórico
         self._record_update_event(
@@ -174,13 +174,15 @@ class FirestoreUserProfileStore(UserProfileStore):
         history_ref = self._doc(user_key).collection("history")
         event_id = f"{timestamp.strftime('%Y%m%d%H%M%S')}_{field}"
 
-        history_ref.document(event_id).set({
-            "timestamp": timestamp.isoformat(),
-            "field_changed": field,
-            "old_value": old_value,
-            "new_value": new_value,
-            "actor": actor,
-        })
+        history_ref.document(event_id).set(
+            {
+                "timestamp": timestamp.isoformat(),
+                "field_changed": field,
+                "old_value": old_value,
+                "new_value": new_value,
+                "actor": actor,
+            }
+        )
 
     def get_update_history(
         self,
@@ -201,13 +203,15 @@ class FirestoreUserProfileStore(UserProfileStore):
             try:
                 ts_str = data["timestamp"]
                 ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                events.append(ProfileUpdateEvent(
-                    timestamp=ts,
-                    field_changed=data["field_changed"],
-                    old_value=data.get("old_value"),
-                    new_value=data.get("new_value"),
-                    actor=data.get("actor", "system"),
-                ))
+                events.append(
+                    ProfileUpdateEvent(
+                        timestamp=ts,
+                        field_changed=data["field_changed"],
+                        old_value=data.get("old_value"),
+                        new_value=data.get("new_value"),
+                        actor=data.get("actor", "system"),
+                    )
+                )
             except Exception:
                 continue  # Ignora eventos malformados
 

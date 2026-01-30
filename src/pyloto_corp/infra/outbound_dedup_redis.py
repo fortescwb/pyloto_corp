@@ -53,12 +53,14 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
 
         try:
             now = datetime.now(tz=UTC)
-            value = json.dumps({
-                "message_id": message_id,
-                "timestamp": now.isoformat(),
-                "status": "pending",
-                "error": None,
-            })
+            value = json.dumps(
+                {
+                    "message_id": message_id,
+                    "timestamp": now.isoformat(),
+                    "status": "pending",
+                    "error": None,
+                }
+            )
 
             # SETNX: set only if not exists, com EXPIRE
             was_set = self._redis.set(key, value, nx=True, ex=ttl)
@@ -130,12 +132,14 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
 
         try:
             now = datetime.now(tz=UTC)
-            value = json.dumps({
-                "message_id": message_id,
-                "timestamp": now.isoformat(),
-                "status": "sent",
-                "error": None,
-            })
+            value = json.dumps(
+                {
+                    "message_id": message_id,
+                    "timestamp": now.isoformat(),
+                    "status": "sent",
+                    "error": None,
+                }
+            )
 
             # Atualiza sempre, preservando TTL
             self._redis.set(key, value, ex=ttl)
@@ -160,12 +164,14 @@ class RedisOutboundDedupeStore(OutboundDedupeStore):
 
         try:
             now = datetime.now(tz=UTC)
-            value = json.dumps({
-                "message_id": idempotency_key,
-                "timestamp": now.isoformat(),
-                "status": "failed",
-                "error": error,
-            })
+            value = json.dumps(
+                {
+                    "message_id": idempotency_key,
+                    "timestamp": now.isoformat(),
+                    "status": "failed",
+                    "error": error,
+                }
+            )
             self._redis.set(key, value, ex=ttl)
             return True
         except Exception as e:

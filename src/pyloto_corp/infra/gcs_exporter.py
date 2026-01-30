@@ -282,19 +282,19 @@ class GCSHistoryExporter:
 
         try:
             doc_id = f"{metadata.user_key}_{metadata.created_at.strftime('%Y%m%d%H%M%S')}"
-            doc_ref = self._firestore.collection(self._metadata_collection).document(
-                doc_id
-            )
+            doc_ref = self._firestore.collection(self._metadata_collection).document(doc_id)
 
-            doc_ref.set({
-                "gcs_uri": metadata.gcs_uri,
-                "user_key": metadata.user_key,
-                "created_at": metadata.created_at,
-                "expires_at": metadata.expires_at,
-                "size_bytes": metadata.size_bytes,
-                "content_type": metadata.content_type,
-                # Não salvar signed_url (pode expirar)
-            })
+            doc_ref.set(
+                {
+                    "gcs_uri": metadata.gcs_uri,
+                    "user_key": metadata.user_key,
+                    "created_at": metadata.created_at,
+                    "expires_at": metadata.expires_at,
+                    "size_bytes": metadata.size_bytes,
+                    "content_type": metadata.content_type,
+                    # Não salvar signed_url (pode expirar)
+                }
+            )
 
             logger.debug(
                 "Export metadata saved to Firestore",

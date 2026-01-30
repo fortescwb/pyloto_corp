@@ -254,9 +254,7 @@ def create_message_queue_from_settings(
                 "queue_backend=cloud_tasks requires GCP_PROJECT and CLOUDTASKS_QUEUE_NAME"
             )
         if not resolved_handler:
-            raise MessageQueueError(
-                "queue_backend=cloud_tasks requires handler_url configured"
-            )
+            raise MessageQueueError("queue_backend=cloud_tasks requires handler_url configured")
         return GoogleCloudTasksQueue(
             project=project,
             queue=resolved_queue,

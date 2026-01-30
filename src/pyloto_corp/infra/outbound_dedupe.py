@@ -32,10 +32,12 @@ DEFAULT_TTL_SECONDS = OutboundDedupeStore.DEFAULT_TTL_SECONDS
 def hash_message_content(content: dict) -> str:
     """Compatibilidade com hash do módulo legado (JSON ordenado)."""
     import json
+
     serialized = json.dumps(content, sort_keys=True, ensure_ascii=False)
     import hashlib
 
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
 
 __all__ = [
     "DedupeResult",

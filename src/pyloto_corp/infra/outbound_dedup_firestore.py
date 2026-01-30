@@ -56,13 +56,15 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
     ) -> None:
         """Cria/atualiza entrada de dedupe."""
         now = datetime.now(tz=UTC)
-        doc_ref.set({
-            "message_id": message_id,
-            "timestamp": now,
-            "_ttl_expire_at": expire_at,
-            "status": status,
-            "error": error,
-        })
+        doc_ref.set(
+            {
+                "message_id": message_id,
+                "timestamp": now,
+                "_ttl_expire_at": expire_at,
+                "status": status,
+                "error": error,
+            }
+        )
 
     def _handle_existing(
         self,
@@ -107,9 +109,7 @@ class FirestoreOutboundDedupeStore(OutboundDedupeStore):
             doc = doc_ref.get()
 
             if doc.exists:
-                return self._handle_existing(
-                    doc.to_dict(), doc_ref, message_id, expire_at
-                )
+                return self._handle_existing(doc.to_dict(), doc_ref, message_id, expire_at)
 
             self._create_entry(doc_ref, message_id, expire_at, status="pending")
             logger.debug(
