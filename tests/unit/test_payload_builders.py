@@ -347,4 +347,3 @@ class TestTemplatePayloadBuilder:
         assert payload is not None
         assert "template" in payload
         assert payload["template"]["name"] == "hello_world"
-

@@ -226,10 +226,12 @@ class TestRedisOutboundDedupeStore:
     def test_check_and_mark_duplicate(self, mock_redis: MagicMock) -> None:
         """Mensagem duplicada com SETNX falho."""
         mock_redis.set.return_value = False  # SETNX falha (já existe)
-        mock_redis.get.return_value = json.dumps({
-            "message_id": "msg_original",
-            "timestamp": "2026-01-25T18:00:00+00:00",
-        })
+        mock_redis.get.return_value = json.dumps(
+            {
+                "message_id": "msg_original",
+                "timestamp": "2026-01-25T18:00:00+00:00",
+            }
+        )
 
         store = RedisOutboundDedupeStore(mock_redis)
         result = store.check_and_mark("key_123", "msg_abc")
@@ -287,9 +289,7 @@ class TestFirestoreOutboundDedupeStore:
         """Nova mensagem com documento inexistente."""
         mock_doc = MagicMock()
         mock_doc.exists = False
-        mock_firestore.collection.return_value.document.return_value.get.return_value = (
-            mock_doc
-        )
+        mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
 
         store = FirestoreOutboundDedupeStore(mock_firestore)
         result = store.check_and_mark("key_123", "msg_abc")
@@ -306,9 +306,7 @@ class TestFirestoreOutboundDedupeStore:
             "timestamp": datetime.now(tz=UTC),
             "_ttl_expire_at": datetime.now(tz=UTC) + timedelta(hours=24),
         }
-        mock_firestore.collection.return_value.document.return_value.get.return_value = (
-            mock_doc
-        )
+        mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
 
         store = FirestoreOutboundDedupeStore(mock_firestore)
         result = store.check_and_mark("key_123", "msg_abc")
@@ -325,9 +323,7 @@ class TestFirestoreOutboundDedupeStore:
             "timestamp": datetime.now(tz=UTC) - timedelta(days=2),
             "_ttl_expire_at": datetime.now(tz=UTC) - timedelta(hours=1),  # Expirou
         }
-        mock_firestore.collection.return_value.document.return_value.get.return_value = (
-            mock_doc
-        )
+        mock_firestore.collection.return_value.document.return_value.get.return_value = mock_doc
 
         store = FirestoreOutboundDedupeStore(mock_firestore)
         result = store.check_and_mark("key_123", "msg_new")
@@ -336,8 +332,8 @@ class TestFirestoreOutboundDedupeStore:
 
     def test_firestore_error_raises_exception(self, mock_firestore: MagicMock) -> None:
         """Erro de Firestore deve levantar OutboundDedupeError."""
-        mock_firestore.collection.return_value.document.return_value.get.side_effect = (
-            Exception("Firestore unavailable")
+        mock_firestore.collection.return_value.document.return_value.get.side_effect = Exception(
+            "Firestore unavailable"
         )
 
         store = FirestoreOutboundDedupeStore(mock_firestore)
@@ -422,10 +418,7 @@ class TestOutboundDedupeEdgeCases:
         in_memory_store: InMemoryOutboundDedupeStore,
     ) -> None:
         """Múltiplas verificações com mesma chave."""
-        results = [
-            in_memory_store.check_and_mark("key_same", f"msg_{i}")
-            for i in range(5)
-        ]
+        results = [in_memory_store.check_and_mark("key_same", f"msg_{i}") for i in range(5)]
 
         # Apenas a primeira não é duplicata
         assert results[0].is_duplicate is False

@@ -91,11 +91,14 @@ class TestValidateSignature:
         payload = b'{"test": "data"}'
         secret = "test_secret_123"
 
-        signature = "sha256=" + hmac.new(
-            secret.encode(),
-            payload,
-            hashlib.sha256,
-        ).hexdigest()
+        signature = (
+            "sha256="
+            + hmac.new(
+                secret.encode(),
+                payload,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         assert flow_sender.validate_signature(payload, signature) is True
 
@@ -118,11 +121,14 @@ class TestValidateSignature:
         original_payload = b'{"test": "data"}'
         secret = "test_secret_123"
 
-        signature = "sha256=" + hmac.new(
-            secret.encode(),
-            original_payload,
-            hashlib.sha256,
-        ).hexdigest()
+        signature = (
+            "sha256="
+            + hmac.new(
+                secret.encode(),
+                original_payload,
+                hashlib.sha256,
+            ).hexdigest()
+        )
 
         tampered_payload = b'{"test": "hacked"}'
 
@@ -341,9 +347,7 @@ class TestCreateFlowSender:
         private_pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.BestAvailableEncryption(
-                passphrase.encode()
-            ),
+            encryption_algorithm=serialization.BestAvailableEncryption(passphrase.encode()),
         ).decode("utf-8")
 
         sender = create_flow_sender(

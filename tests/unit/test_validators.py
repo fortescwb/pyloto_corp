@@ -483,10 +483,7 @@ class TestInteractiveMessageValidator:
             message_type=MessageType.INTERACTIVE.value,
             interactive_type="button",
             text="Escolha:",
-            buttons=[
-                {"id": f"btn_{i}", "title": f"Op {i}"}
-                for i in range(5)
-            ],
+            buttons=[{"id": f"btn_{i}", "title": f"Op {i}"} for i in range(5)],
         )
 
         with pytest.raises(ValidationError) as exc_info:

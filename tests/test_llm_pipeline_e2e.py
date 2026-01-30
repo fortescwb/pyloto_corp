@@ -69,9 +69,7 @@ class TestLLMPipelineOrder:
         call_order = []
 
         with patch.object(pipeline, "_run_fsm") as mock_fsm:
-            mock_fsm.side_effect = lambda s: (
-                    call_order.append("fsm"), ("INIT", "NEXT")
-                )[1]
+            mock_fsm.side_effect = lambda s: (call_order.append("fsm"), ("INIT", "NEXT"))[1]
 
             with patch.object(pipeline, "_run_llm1_event_detection") as mock_llm1:
                 mock_llm1.side_effect = lambda m, s: (
@@ -86,9 +84,7 @@ class TestLLMPipelineOrder:
                 )[1]
 
                 with patch.object(pipeline, "_is_abuse", return_value=False):
-                    with patch.object(
-                        pipeline, "_run_llm2_response_generation"
-                    ) as mock_llm2:
+                    with patch.object(pipeline, "_run_llm2_response_generation") as mock_llm2:
                         mock_llm2.side_effect = lambda m, llm1_result, s, ns: (
                             call_order.append("llm2"),
                             ResponseGenerationResult(
@@ -101,9 +97,7 @@ class TestLLMPipelineOrder:
                             ),
                         )[1]
 
-                        with patch.object(
-                            pipeline, "_run_llm3_message_selection"
-                        ) as mock_llm3:
+                        with patch.object(pipeline, "_run_llm3_message_selection") as mock_llm3:
                             mock_llm3.side_effect = lambda s, e, llm2_result: (
                                 call_order.append("llm3"),
                                 MessagePlan(
@@ -117,9 +111,7 @@ class TestLLMPipelineOrder:
                                 ),
                             )[1]
 
-                            with patch.object(
-                                pipeline, "_build_whatsapp_payload"
-                            ) as mock_build:
+                            with patch.object(pipeline, "_build_whatsapp_payload") as mock_build:
                                 mock_build.return_value = {
                                     "messaging_product": "whatsapp",
                                     "to": "+5511987654321",
@@ -133,15 +125,15 @@ class TestLLMPipelineOrder:
                                     mock_result = MagicMock()
                                     mock_result.success = True
                                     mock_result.message_id = "wamid_test"
-                                    (mock_outbound.return_value
-                                     .send_message.return_value) = mock_result
+                                    (
+                                        mock_outbound.return_value.send_message.return_value
+                                    ) = mock_result
 
                                     pipeline._process_message(mock_message)
 
         # Verificar ordem
         assert call_order == ["fsm", "llm1", "llm2", "llm3"], (
-            f"Ordem violada! Esperado ['fsm', 'llm1', 'llm2', 'llm3'], "
-            f"recebido {call_order}"
+            f"Ordem violada! Esperado ['fsm', 'llm1', 'llm2', 'llm3'], recebido {call_order}"
         )
 
     def test_llm3_requires_llm2_result(self, mock_stores, mock_message):
@@ -161,9 +153,7 @@ class TestLLMPipelineOrder:
 
         with patch.object(pipeline, "_is_abuse", return_value=False):
             with patch.object(pipeline, "_run_fsm", return_value=("INIT", "NEXT")):
-                with patch.object(
-                    pipeline, "_run_llm1_event_detection"
-                ) as mock_llm1:
+                with patch.object(pipeline, "_run_llm1_event_detection") as mock_llm1:
                     mock_llm1.return_value = EventDetectionResult(
                         event=SessionEvent.USER_SENT_TEXT,
                         detected_intent=Intent.CUSTOM_SOFTWARE,
@@ -172,15 +162,11 @@ class TestLLMPipelineOrder:
                         rationale="User asking about Pyloto",
                     )
 
-                    with patch.object(
-                        pipeline, "_run_llm2_response_generation"
-                    ) as mock_llm2:
+                    with patch.object(pipeline, "_run_llm2_response_generation") as mock_llm2:
                         mock_llm2.return_value = llm2_result
 
                         # Capturar argumentos passados para LLM #3
-                        with patch.object(
-                            pipeline, "_run_llm3_message_selection"
-                        ) as mock_llm3:
+                        with patch.object(pipeline, "_run_llm3_message_selection") as mock_llm3:
                             mock_llm3.return_value = MessagePlan(
                                 kind="TEXT",
                                 reason="Simple text",
@@ -191,9 +177,7 @@ class TestLLMPipelineOrder:
                                 ),
                             )
 
-                            with patch.object(
-                                pipeline, "_build_whatsapp_payload"
-                            ) as mock_build:
+                            with patch.object(pipeline, "_build_whatsapp_payload") as mock_build:
                                 mock_build.return_value = {
                                     "messaging_product": "whatsapp",
                                     "to": "+5511987654321",
@@ -207,8 +191,9 @@ class TestLLMPipelineOrder:
                                     mock_result = MagicMock()
                                     mock_result.success = True
                                     mock_result.message_id = "wamid_test"
-                                    (mock_outbound.return_value
-                                     .send_message.return_value) = mock_result
+                                    (
+                                        mock_outbound.return_value.send_message.return_value
+                                    ) = mock_result
 
                                     pipeline._process_message(mock_message)
 
@@ -318,9 +303,7 @@ class TestFallbackSafety:
 
         with patch.object(pipeline, "_is_abuse", return_value=False):
             with patch.object(pipeline, "_run_fsm", return_value=("INIT", "NEXT")):
-                with patch.object(
-                    pipeline, "_run_llm1_event_detection"
-                ) as mock_llm1:
+                with patch.object(pipeline, "_run_llm1_event_detection") as mock_llm1:
                     # Simular timeout
                     mock_llm1.side_effect = TimeoutError("API timeout")
 
@@ -337,9 +320,7 @@ class TestFallbackSafety:
 
         with patch.object(pipeline, "_is_abuse", return_value=False):
             with patch.object(pipeline, "_run_fsm", return_value=("INIT", "NEXT")):
-                with patch.object(
-                    pipeline, "_run_llm1_event_detection"
-                ) as mock_llm1:
+                with patch.object(pipeline, "_run_llm1_event_detection") as mock_llm1:
                     mock_llm1.return_value = EventDetectionResult(
                         event=SessionEvent.USER_SENT_TEXT,
                         detected_intent=Intent.ENTRY_UNKNOWN,
@@ -348,9 +329,7 @@ class TestFallbackSafety:
                         rationale="Test",
                     )
 
-                    with patch.object(
-                        pipeline, "_run_llm2_response_generation"
-                    ) as mock_llm2:
+                    with patch.object(pipeline, "_run_llm2_response_generation") as mock_llm2:
                         mock_llm2.return_value = ResponseGenerationResult(
                             text_content="Test",
                             options=[],
@@ -360,9 +339,7 @@ class TestFallbackSafety:
                             rationale="Test",
                         )
 
-                        with patch.object(
-                            pipeline, "_run_llm3_message_selection"
-                        ) as mock_llm3:
+                        with patch.object(pipeline, "_run_llm3_message_selection") as mock_llm3:
                             mock_llm3.return_value = MessagePlan(
                                 kind="TEXT",
                                 reason="Test",
@@ -373,9 +350,7 @@ class TestFallbackSafety:
                                 ),
                             )
 
-                            with patch.object(
-                                pipeline, "_build_whatsapp_payload"
-                            ) as mock_build:
+                            with patch.object(pipeline, "_build_whatsapp_payload") as mock_build:
                                 # Simular erro na construção
                                 mock_build.side_effect = ValueError("Invalid payload")
 

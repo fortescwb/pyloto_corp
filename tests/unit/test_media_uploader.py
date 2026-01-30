@@ -283,10 +283,9 @@ class TestMediaUploaderUpload:
         sample_image_content: bytes,
     ) -> None:
         """Falha no GCS lança MediaUploaderError."""
-        (mock_gcs_client.bucket.return_value.blob.return_value
-            .upload_from_string.side_effect) = Exception(
-            "GCS error"
-        )
+        (
+            mock_gcs_client.bucket.return_value.blob.return_value.upload_from_string.side_effect
+        ) = Exception("GCS error")
 
         uploader = MediaUploader(
             gcs_client=mock_gcs_client,

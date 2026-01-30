@@ -36,11 +36,7 @@ class TestBatchSizeValidation:
         """Batch com exatamente 100 mensagens deve ser aceito."""
         payload = {
             "entry": [
-                {
-                    "changes": [
-                        {"value": {"messages": [{"id": f"msg{i}"} for i in range(100)]}}
-                    ]
-                }
+                {"changes": [{"value": {"messages": [{"id": f"msg{i}"} for i in range(100)]}}]}
             ]
         }
 
@@ -55,11 +51,7 @@ class TestBatchSizeValidation:
         """Batch com >100 mensagens deve ser rejeitado (413 Payload Too Large)."""
         payload = {
             "entry": [
-                {
-                    "changes": [
-                        {"value": {"messages": [{"id": f"msg{i}"} for i in range(101)]}}
-                    ]
-                }
+                {"changes": [{"value": {"messages": [{"id": f"msg{i}"} for i in range(101)]}}]}
             ]
         }
 
@@ -74,18 +66,8 @@ class TestBatchSizeValidation:
         """Múltiplas entries: somar todas as mensagens."""
         payload = {
             "entry": [
-                {
-                    "changes": [
-                        {"value": {"messages": [{"id": f"msg{i}"} for i in range(50)]}}
-                    ]
-                },
-                {
-                    "changes": [
-                        {
-                            "value": {"messages": [{"id": f"msg{i+50}"} for i in range(50)]}
-                        }
-                    ]
-                },
+                {"changes": [{"value": {"messages": [{"id": f"msg{i}"} for i in range(50)]}}]},
+                {"changes": [{"value": {"messages": [{"id": f"msg{i + 50}"} for i in range(50)]}}]},
             ]
         }
 
@@ -100,18 +82,8 @@ class TestBatchSizeValidation:
         """Múltiplas entries: total >100 deve falhar."""
         payload = {
             "entry": [
-                {
-                    "changes": [
-                        {"value": {"messages": [{"id": f"msg{i}"} for i in range(51)]}}
-                    ]
-                },
-                {
-                    "changes": [
-                        {
-                            "value": {"messages": [{"id": f"msg{i+51}"} for i in range(51)]}
-                        }
-                    ]
-                },
+                {"changes": [{"value": {"messages": [{"id": f"msg{i}"} for i in range(51)]}}]},
+                {"changes": [{"value": {"messages": [{"id": f"msg{i + 51}"} for i in range(51)]}}]},
             ]
         }
 

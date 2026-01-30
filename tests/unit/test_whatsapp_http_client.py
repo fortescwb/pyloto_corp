@@ -206,9 +206,7 @@ class TestWhatsAppHttpClientSendMessage:
         client = WhatsAppHttpClient(config=config)
 
         mock_response = MagicMock(spec=httpx.Response)
-        mock_response.json.side_effect = json.JSONDecodeError(
-            "Expecting value", "", 0
-        )
+        mock_response.json.side_effect = json.JSONDecodeError("Expecting value", "", 0)
         mock_response.is_success = True
 
         with patch.object(

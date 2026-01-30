@@ -38,11 +38,7 @@ class TestSanitizeWebhookPayload:
 
     def test_sanitize_message_ids(self) -> None:
         """Deve sanitizar IDs de mensagem."""
-        payload = {
-            "messages": [
-                {"id": "wamid.HBgMNTUxMTk5OTg4Nzc2NhUCABIYFjBBOTk5ODg3NzY2NQ=="}
-            ]
-        }
+        payload = {"messages": [{"id": "wamid.HBgMNTUxMTk5OTg4Nzc2NhUCABIYFjBBOTk5ODg3NzY2NQ=="}]}
 
         result = sanitize_webhook_payload(payload)
 
@@ -82,9 +78,7 @@ class TestSanitizeWebhookPayload:
 
     def test_sanitize_urls(self) -> None:
         """Deve sanitizar URLs."""
-        payload = {
-            "media": {"url": "https://cdn.fbsbx.com/v/t59.2708-21/123456.jpeg"}
-        }
+        payload = {"media": {"url": "https://cdn.fbsbx.com/v/t59.2708-21/123456.jpeg"}}
 
         result = sanitize_webhook_payload(payload)
 

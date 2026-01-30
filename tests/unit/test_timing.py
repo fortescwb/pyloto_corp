@@ -20,7 +20,7 @@ class TestTimedContextManager:
             # Verificar que foi logado
             mock_logger.info.assert_called_once()
             call_args = mock_logger.info.call_args
-            
+
             # Verificar que elapsed_ms foi gravado
             assert "elapsed_ms" in call_args.kwargs["extra"]
             elapsed = call_args.kwargs["extra"]["elapsed_ms"]
@@ -56,14 +56,14 @@ class TestTimedContextManager:
 
             call_args = mock_logger.info.call_args
             elapsed = call_args.kwargs["extra"]["elapsed_ms"]
-            
+
             # Deve estar próximo a 50ms
             assert 45.0 <= elapsed <= 100.0
 
     def test_timed_different_components(self):
         """timed() deve suportar múltiplos componentes."""
         components = []
-        
+
         with patch("pyloto_corp.observability.timing.logger") as mock_logger:
             mock_logger.info.side_effect = lambda msg, **kw: components.append(
                 kw["extra"]["component"]

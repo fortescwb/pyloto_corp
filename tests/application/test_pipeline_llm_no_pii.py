@@ -113,8 +113,7 @@ class TestPipelineLLMNoPII:
         # Validações
         assert len(masked_history) == 5  # Truncado para últimas 5
         assert all(
-            "[CPF]" in msg or "[EMAIL]" in msg or "[PHONE]" in msg
-            for msg in masked_history[:3]
+            "[CPF]" in msg or "[EMAIL]" in msg or "[PHONE]" in msg for msg in masked_history[:3]
         )
         # Nenhum PII em claro
         for msg in masked_history:

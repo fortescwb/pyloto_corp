@@ -17,9 +17,7 @@ class TestSignatureValidationWithSecret:
         """Assinatura válida deve passar."""
         secret = "my_secret"
         body = b'{"object":"whatsapp_business_account","entry":[{"id":"1","changes":[]}]}'
-        expected_hash = hmac.new(
-            secret.encode(), body, hashlib.sha256
-        ).hexdigest()
+        expected_hash = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         headers = {"x-hub-signature-256": f"sha256={expected_hash}"}
 
         result = verify_meta_signature(body, headers, secret)
@@ -105,9 +103,7 @@ class TestSignatureValidationEdgeCases:
         """Body vazio com assinatura válida deve passar."""
         secret = "my_secret"
         body = b""
-        expected_hash = hmac.new(
-            secret.encode(), body, hashlib.sha256
-        ).hexdigest()
+        expected_hash = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         headers = {"x-hub-signature-256": f"sha256={expected_hash}"}
 
         result = verify_meta_signature(body, headers, secret)
@@ -117,9 +113,7 @@ class TestSignatureValidationEdgeCases:
         """Body unicode deve ser validado corretamente."""
         secret = "my_secret"
         body = "ñáéíóú".encode()
-        expected_hash = hmac.new(
-            secret.encode(), body, hashlib.sha256
-        ).hexdigest()
+        expected_hash = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         headers = {"x-hub-signature-256": f"sha256={expected_hash}"}
 
         result = verify_meta_signature(body, headers, secret)
@@ -129,9 +123,7 @@ class TestSignatureValidationEdgeCases:
         """Algoritmo no header deve estar em minúsculas."""
         secret = "my_secret"
         body = b'{"object":"whatsapp_business_account"}'
-        expected_hash = hmac.new(
-            secret.encode(), body, hashlib.sha256
-        ).hexdigest()
+        expected_hash = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
         # Uso com "SHA256" em vez de "sha256" (como na especificação Meta)
         headers = {"x-hub-signature-256": f"sha256={expected_hash}"}
 

@@ -47,9 +47,7 @@ class TestAppBootstrapSessionStore:
         )
         # Mock no local onde são usados (pyloto_corp.api.app)
         with (
-            patch(
-                "pyloto_corp.api.app._create_redis_client", return_value=mock_redis_client
-            ),
+            patch("pyloto_corp.api.app._create_redis_client", return_value=mock_redis_client),
             patch(
                 "pyloto_corp.api.app.create_flood_detector_from_settings",
                 return_value=mock_flood_detector,
