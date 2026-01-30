@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from pyloto_corp.infra.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
 from pyloto_corp.observability.logging import get_logger
 
 if TYPE_CHECKING:
@@ -54,6 +55,10 @@ class HttpClientConfig:
     backoff_max_seconds: float = 30.0
     default_headers: dict[str, str] = field(default_factory=dict)
     verify_ssl: bool = True
+    circuit_breaker_enabled: bool = False
+    circuit_breaker_fail_max: int = 5
+    circuit_breaker_reset_timeout_seconds: float = 60.0
+    circuit_breaker_half_open_max_calls: int = 1
 
 
 class HttpError(Exception):
@@ -204,6 +209,15 @@ class HttpClient:
         """Inicializa cliente com configuração."""
         self._config = config or HttpClientConfig()
         self._client: httpx.AsyncClient | None = None
+        self._circuit_breaker: CircuitBreaker | None = None
+        if self._config.circuit_breaker_enabled:
+            breaker_cfg = CircuitBreakerConfig(
+                enabled=self._config.circuit_breaker_enabled,
+                fail_max=self._config.circuit_breaker_fail_max,
+                reset_timeout_seconds=self._config.circuit_breaker_reset_timeout_seconds,
+                half_open_max_calls=self._config.circuit_breaker_half_open_max_calls,
+            )
+            self._circuit_breaker = CircuitBreaker(breaker_cfg)
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Retorna cliente httpx (lazy loading)."""
@@ -276,6 +290,58 @@ class HttpClient:
         _log_retries_exhausted(method, url, cfg.max_retries + 1)
         raise last_error or HttpError("Falha após todos os retries")
 
+    async def _request(
+        self,
+        method: str,
+        url: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Orquestra requisição com circuit breaker e retry."""
+
+        breaker = self._circuit_breaker
+        if breaker:
+            allowed = await breaker.allow_request()
+            if not allowed:
+                logger.warning(
+                    "Circuit breaker aberto - falha rápida",
+                    extra={
+                        "method": method,
+                        "url": _sanitize_url(url),
+                        "breaker_state": breaker.state,
+                    },
+                )
+                raise HttpError("Circuit breaker aberto", is_retryable=False)
+
+        try:
+            response = await self._request_with_retry(method, url, **kwargs)
+        except HttpError as exc:
+            if breaker:
+                state = await breaker.record_failure(exc.is_retryable)
+                if state == "open":
+                    logger.error(
+                        "Circuit breaker aberto após falhas consecutivas",
+                        extra={
+                            "method": method,
+                            "url": _sanitize_url(url),
+                            "breaker_failures": breaker.failure_count,
+                        },
+                    )
+            raise
+
+        if breaker:
+            previous_state = breaker.state
+            await breaker.record_success()
+            if previous_state != "closed":
+                logger.info(
+                    "Circuit breaker fechado após sucesso",
+                    extra={
+                        "method": method,
+                        "url": _sanitize_url(url),
+                    },
+                )
+
+        return response
+
     def _process_response(
         self,
         response: httpx.Response,
@@ -316,7 +382,7 @@ class HttpClient:
 
     async def get(self, url: str, **kwargs: Any) -> httpx.Response:
         """Executa GET com retry."""
-        return await self._request_with_retry("GET", url, **kwargs)
+        return await self._request("GET", url, **kwargs)
 
     async def post(
         self,
@@ -325,7 +391,7 @@ class HttpClient:
         **kwargs: Any,
     ) -> httpx.Response:
         """Executa POST com retry."""
-        return await self._request_with_retry("POST", url, json=json, **kwargs)
+        return await self._request("POST", url, json=json, **kwargs)
 
     async def put(
         self,
@@ -334,11 +400,11 @@ class HttpClient:
         **kwargs: Any,
     ) -> httpx.Response:
         """Executa PUT com retry."""
-        return await self._request_with_retry("PUT", url, json=json, **kwargs)
+        return await self._request("PUT", url, json=json, **kwargs)
 
     async def delete(self, url: str, **kwargs: Any) -> httpx.Response:
         """Executa DELETE com retry."""
-        return await self._request_with_retry("DELETE", url, **kwargs)
+        return await self._request("DELETE", url, **kwargs)
 
 
 def create_http_client(settings: Settings | None = None) -> HttpClient:
@@ -363,6 +429,12 @@ def create_http_client(settings: Settings | None = None) -> HttpClient:
             "User-Agent": f"{settings.service_name}/{settings.version}",
         },
         verify_ssl=settings.is_production,
+        circuit_breaker_enabled=settings.whatsapp_circuit_breaker_enabled,
+        circuit_breaker_fail_max=settings.whatsapp_circuit_breaker_fail_max,
+        circuit_breaker_reset_timeout_seconds=float(
+            settings.whatsapp_circuit_breaker_reset_timeout_seconds
+        ),
+        circuit_breaker_half_open_max_calls=settings.whatsapp_circuit_breaker_half_open_max_calls,
     )
 
     logger.info(

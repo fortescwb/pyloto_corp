@@ -345,3 +345,16 @@ Detalhes Importantes:
 Exceção de Vídeos: Para uploads de arquivos de vídeo, a URL base muda ligeiramente para `https://graph-video.facebook.com`.
 
 ---
+
+## 14. Legado planejado — `src/pyloto_corp/ai/orchestrator.py`
+
+* Status: LEGACY — Planned removal in v2.0
+* Motivo: depende de fallback determinístico enquanto estabilidade de LLM não atinge threshold
+* Plano de remoção (checklist):
+  1. Confirmar que `application/orchestration_*` substitui todas as chamadas deste arquivo
+  2. Validar que métricas de estabilidade de LLM permanecem >= threshold por período sustentado
+  3. Manter fallback determinístico ativo até a remoção
+  4. Remover imports/uso do arquivo, apagar testes relacionados e atualizar documentação
+  5. Registrar a remoção em changelog/auditoria
+
+---

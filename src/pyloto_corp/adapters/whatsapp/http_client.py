@@ -262,6 +262,12 @@ def create_whatsapp_http_client(
     config = HttpClientConfig(
         timeout_seconds=float(settings.whatsapp_request_timeout_seconds),
         max_retries=settings.whatsapp_max_retries,
+        circuit_breaker_enabled=settings.whatsapp_circuit_breaker_enabled,
+        circuit_breaker_fail_max=settings.whatsapp_circuit_breaker_fail_max,
+        circuit_breaker_reset_timeout_seconds=float(
+            settings.whatsapp_circuit_breaker_reset_timeout_seconds
+        ),
+        circuit_breaker_half_open_max_calls=settings.whatsapp_circuit_breaker_half_open_max_calls,
     )
     return WhatsAppHttpClient(
         config=config,

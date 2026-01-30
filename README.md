@@ -65,6 +65,10 @@ uvicorn pyloto_corp.api.app:app --reload --port 8080
 - `regras_e_padroes.md`: estilo, arquitetura, segurança
 - `docs/whatsapp/`, `docs/auditoria/`, `docs/firestore/`
 
+## Legado planejado
+
+- `src/pyloto_corp/ai/orchestrator.py` — LEGACY — Planned removal in v2.0; manter até que `application/orchestration_*` substitua totalmente e métricas de estabilidade de LLM se mantenham >= threshold com fallback determinístico ativo. Checklist de remoção em Funcionamento.md §14.
+
 ## Licença e Contribuição
 
 Projeto **privado e proprietário**. Contribuições externas não são aceitas. Código mantido por equipe interna sob políticas de confidencialidade da Pyloto.

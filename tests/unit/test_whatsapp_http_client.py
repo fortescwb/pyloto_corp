@@ -238,6 +238,10 @@ class TestCreateWhatsAppHttpClient:
         settings.version = "1.0.0"
         settings.is_production = True
         settings.whatsapp_phone_number_id = "123456"
+        settings.whatsapp_circuit_breaker_enabled = True
+        settings.whatsapp_circuit_breaker_fail_max = 4
+        settings.whatsapp_circuit_breaker_reset_timeout_seconds = 10.0
+        settings.whatsapp_circuit_breaker_half_open_max_calls = 2
 
         client = create_whatsapp_http_client(settings)
 
@@ -245,3 +249,7 @@ class TestCreateWhatsAppHttpClient:
         assert client.phone_number_id == "123456"
         assert client._config.timeout_seconds == 30.0
         assert client._config.max_retries == 3
+        assert client._config.circuit_breaker_enabled is True
+        assert client._config.circuit_breaker_fail_max == 4
+        assert client._config.circuit_breaker_reset_timeout_seconds == 10.0
+        assert client._config.circuit_breaker_half_open_max_calls == 2

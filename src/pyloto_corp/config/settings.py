@@ -72,6 +72,10 @@ class Settings(BaseSettings):
     whatsapp_retry_backoff_seconds: int = 2  # Segundos para backoff exponencial
     whatsapp_request_timeout_seconds: int = 30  # Timeout HTTP
     whatsapp_max_batch_size: int = 100  # Tamanho máximo de lote
+    whatsapp_circuit_breaker_enabled: bool = False  # Circuit breaker desabilitado por padrão
+    whatsapp_circuit_breaker_fail_max: int = 5  # Falhas consecutivas antes de abrir
+    whatsapp_circuit_breaker_reset_timeout_seconds: float = 60.0  # Tempo até half-open
+    whatsapp_circuit_breaker_half_open_max_calls: int = 1  # Tentativas em half-open
 
     # Upload de mídia
     whatsapp_media_upload_max_mb: int = 100  # Limite de arquivo

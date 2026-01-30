@@ -1,4 +1,8 @@
-"""Orquestrador de IA — classificação de intenção e decisão de outcome.
+"""
+LEGACY — Planned removal in v2.0
+Depends on deterministic fallback until LLM stability >= threshold
+
+Orquestrador de IA — classificação de intenção e decisão de outcome.
 
 Responsabilidades:
 - Classificar intenção primária da mensagem
@@ -10,6 +14,10 @@ Conforme Funcionamento.md § 3.1 — outcomes canônicos:
 HANDOFF_HUMAN, SELF_SERVE_INFO, ROUTE_EXTERNAL, SCHEDULED_FOLLOWUP,
 AWAITING_USER, DUPLICATE_OR_SPAM, UNSUPPORTED, FAILED_INTERNAL
 """
+
+# TODO(PR-11, LEGACY): Remover na v2.0 depois que orchestration_* substituir este
+# caminho e métricas de estabilidade de LLM ficarem >= threshold por período
+# sustentado. Manter fallback determinístico até lá.
 
 from __future__ import annotations
 
