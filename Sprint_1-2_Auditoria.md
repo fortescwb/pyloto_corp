@@ -1,4 +1,6 @@
-# O plano foi escrito como **documento de execução técnica**, não como auditoria, e respeita integralmente
+# Sprint 1 e 2 **CONCLUÍDAS**
+
+## O plano foi escrito como **documento de execução técnica**, não como auditoria, e respeita integralmente
 
 * o fluxo funcional já validado
 * os achados da auditoria
@@ -379,3 +381,5 @@ Responsável por:
 ➡️ **Isso fica para Sprint 3 e 4**, agora com base sólida.
 
 ---
+
+## Sprint 1-2 **CONCLUÍDAS**
