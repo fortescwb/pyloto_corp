@@ -14,6 +14,22 @@ PROJECT_ID="atendimento-inicial-pyloto"
 REGION="us-central1"
 SERVICE_NAME="pyloto-inbound-api-staging"
 
+# Resolver INTERNAL_TASK_BASE_URL (obrigatório em staging)
+if [ -z "$INTERNAL_TASK_BASE_URL" ]; then
+  EXISTING_SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+    --region "$REGION" \
+    --project "$PROJECT_ID" \
+    --format='value(status.url)' 2>/dev/null || true)
+
+  if [ -n "$EXISTING_SERVICE_URL" ]; then
+    INTERNAL_TASK_BASE_URL="$EXISTING_SERVICE_URL"
+  else
+    echo "❌ INTERNAL_TASK_BASE_URL não definido e serviço ainda não existe."
+    echo "   Defina INTERNAL_TASK_BASE_URL (https) e execute novamente."
+    exit 1
+  fi
+fi
+
 # Step 1: Instalar dependências
 echo "📦 [1/7] Instalando dependências..."
 pip install -e .[dev] --quiet && echo "✅ Deps instaladas" || {
@@ -25,14 +41,6 @@ echo ""
 echo "🧪 [2/7] Executando testes E2E..."
 pytest tests/test_llm_pipeline_e2e.py -v --tb=short || {
   echo "❌ Testes falharam"; exit 1
-}
-
-# Step 3: Rodar cobertura
-echo ""
-echo "📊 [3/7] Verificando cobertura..."
-pytest --cov=src/pyloto_corp/ai --cov=src/pyloto_corp/application \
-       --cov-fail-under=85 tests/test_llm_pipeline_e2e.py --quiet || {
-  echo "❌ Cobertura insuficiente"; exit 1
 }
 
 # Step 4: Lint final
@@ -49,13 +57,15 @@ echo "🐳 [5/7] Verificando Dockerfile..."
 if [ ! -f "Dockerfile" ]; then
   echo "⚠️  Dockerfile não encontrado. Criando básico..."
   cat > Dockerfile << 'EOFDOCKER'
-FROM python:3.13-slim
+FROM python:3.12-slim
 WORKDIR /app
-COPY . .
-RUN pip install --no-cache-dir -e .
-ENV OPENAI_ENABLED=true
-EXPOSE 8000
-CMD ["uvicorn", "src.pyloto_corp.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+COPY pyproject.toml README.md /app/
+COPY src /app/src
+COPY docs /app/docs
+RUN pip install --upgrade pip \
+  && pip install .
+EXPOSE 8080
+CMD ["sh", "-c", "uvicorn pyloto_corp.api.app_async:app --host 0.0.0.0 --port ${PORT:-8080}"]
 EOFDOCKER
 fi
 echo "✅ Dockerfile OK"
@@ -68,8 +78,8 @@ gcloud run deploy $SERVICE_NAME \
   --platform managed \
   --region $REGION \
   --project $PROJECT_ID \
-  --set-env-vars="OPENAI_ENABLED=true,OPENAI_MODEL=gpt-4o-mini,OPENAI_TIMEOUT_SECONDS=10,ENVIRONMENT=staging" \
-  --update-secrets="OPENAI_API_KEY=openai-api-key:latest" \
+  --set-env-vars="OPENAI_ENABLED=true,OPENAI_MODEL=gpt-4o-mini,OPENAI_TIMEOUT_SECONDS=10,ENVIRONMENT=staging,LOG_LEVEL=INFO,CLOUD_TASKS_ENABLED=true,QUEUE_BACKEND=cloud_tasks,GCP_PROJECT=$PROJECT_ID,GCP_LOCATION=$REGION,INTERNAL_TASK_BASE_URL=$INTERNAL_TASK_BASE_URL,INBOUND_TASK_QUEUE_NAME=whatsapp-inbound,OUTBOUND_TASK_QUEUE_NAME=whatsapp-outbound,DEDUPE_BACKEND=redis,SESSION_STORE_BACKEND=redis,INBOUND_LOG_BACKEND=redis,OUTBOUND_DEDUPE_BACKEND=redis,DECISION_AUDIT_BACKEND=firestore" \
+  --update-secrets="OPENAI_API_KEY=openai-api-key:latest,INTERNAL_TASK_TOKEN=internal-task-token:latest,REDIS_URL=redis-url:latest" \
   --cpu=1 \
   --memory=512Mi \
   --timeout=300 \

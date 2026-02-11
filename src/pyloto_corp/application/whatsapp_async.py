@@ -92,7 +92,7 @@ async def handle_inbound_task(
             "correlation_id": correlation_id,
         },
     )
-    
+
     messages = extract_messages(payload)
     logger.info(
         "messages_extracted",
@@ -101,7 +101,7 @@ async def handle_inbound_task(
             "inbound_event_id": inbound_event_id,
         },
     )
-    
+
     deduped = 0
     enqueued = 0
     skipped = 0
@@ -117,7 +117,7 @@ async def handle_inbound_task(
                 "has_text": bool(msg.text),
             },
         )
-        
+
         if not msg.from_number or not msg.text:
             logger.warning(
                 "message_skipped_missing_fields",
@@ -141,9 +141,9 @@ async def handle_inbound_task(
                 "text_preview": msg.text[:30] if msg.text else None,
             },
         )
-        
+
         response = orchestrator.process_message(message=msg)
-        
+
         logger.info(
             "orchestrator_response",
             extra={
@@ -154,7 +154,7 @@ async def handle_inbound_task(
                 "reply_preview": response.reply_text[:50] if response.reply_text else None,
             },
         )
-        
+
         if not response.reply_text:
             logger.warning(
                 "message_skipped_no_reply",
@@ -185,7 +185,7 @@ async def handle_inbound_task(
                 "text_len": len(response.reply_text) if response.reply_text else 0,
             },
         )
-        
+
         try:
             logger.info(
                 "enqueuing_outbound",
@@ -228,7 +228,7 @@ async def handle_inbound_task(
             "deduped": deduped,
         },
     )
-    
+
     return {
         "inbound_event_id": inbound_event_id,
         "processed": enqueued,
